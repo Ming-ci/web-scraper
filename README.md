@@ -17,6 +17,10 @@
 │   ├── scheduler.py           # 多城市批量编排
 │   ├── chart.py               # matplotlib 温度趋势图
 │   └── main.py                # CLI 入口
+├── bilibili/                  # B站热门视频爬虫（Playwright）
+│   ├── fetcher.py             # 浏览器自动化 + BS4 解析
+│   ├── storage.py             # CSV 去重写入
+│   └── main.py                # CLI 入口
 ├── dangdang/                  # 当当网商品爬虫
 │   ├── fetcher.py             # 搜索页解析器（BeautifulSoup + lxml）
 │   ├── storage.py             # CSV 去重写入
@@ -60,6 +64,18 @@ python -m dangdang.main --keyword Python --pages 3
 
 数据来源：`search.dangdang.com`（静态 HTML，GBK 编码）。  
 抓取字段：商品名称、价格、评论数、商品链接。
+
+### B站爬虫 —— 热门视频（Playwright）
+
+使用 Playwright 浏览器自动化抓取 B 站热门视频，支持滚动加载更多。
+
+```bash
+python -m bilibili.main --scroll 3
+```
+
+数据来源：`bilibili.com/v/popular/all`（JavaScript 动态渲染，必须 Playwright）。  
+抓取字段：视频标题、UP 主、播放量、点赞数、视频链接、封面图。  
+技术特点：真实浏览器渲染、滚动加载、`BeautifulSoup` 二次解析。
 
 ### 运行测试
 
