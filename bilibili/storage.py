@@ -3,7 +3,7 @@
 import csv
 from pathlib import Path
 
-CSV_COLUMNS = ["title", "author", "plays", "likes", "rank", "category", "scrape_time"]
+CSV_COLUMNS = ["title", "author", "plays", "likes", "category", "link", "cover", "rank", "scrape_time"]
 
 
 def save(data: list[dict], filepath: str = "data/bilibili.csv") -> int:

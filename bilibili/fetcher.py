@@ -88,12 +88,28 @@ def _parse_item(li) -> dict | None:
     if not title:
         return None
 
+    # 视频链接 — 第一个 a 标签的 href
+    link_el = li.select_one("a")
+    link = link_el.get("href", "") if link_el else ""
+    if link and link.startswith("//"):
+        link = f"https:{link}"
+
+    # 封面图 — img 的 data-src（原图）或 src
+    img_el = li.select_one("img")
+    cover = ""
+    if img_el:
+        cover = img_el.get("data-src") or img_el.get("src") or ""
+        if cover.startswith("//"):
+            cover = f"https:{cover}"
+
     return {
         "title": title.strip(),
         "author": author.strip(),
         "plays": plays.strip(),
         "likes": likes.strip(),
         "rank": rank,
+        "link": link.strip(),
+        "cover": cover.strip(),
     }
 
 
