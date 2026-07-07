@@ -1,0 +1,77 @@
+# tier1 RSS 源 — 精选高质量海外科技/奇闻源
+sources:
+  - name: "Hacker News"
+    url: "https://hnrss.org/frontpage"
+    category: "tech"
+    type: "rss"
+
+  - name: "TechCrunch"
+    url: "https://techcrunch.com/feed/"
+    category: "tech"
+    type: "rss"
+
+  - name: "The Verge"
+    url: "https://www.theverge.com/rss/index.xml"
+    category: "tech"
+    type: "rss"
+
+  - name: "Ars Technica"
+    url: "https://feeds.arstechnica.com/arstechnica/index"
+    category: "tech"
+    type: "rss"
+
+  - name: "Wired"
+    url: "https://www.wired.com/feed/rss"
+    category: "tech"
+    type: "rss"
+
+  - name: "The Register"
+    url: "https://www.theregister.com/headlines.atom"
+    category: "tech"
+    type: "rss"
+
+  - name: "Engadget"
+    url: "https://www.engadget.com/rss.xml"
+    category: "tech"
+    type: "rss"
+
+  - name: "9to5Mac"
+    url: "https://9to5mac.com/feed/"
+    category: "tech"
+    type: "rss"
+
+  - name: "Boing Boing"
+    url: "https://boingboing.net/feed"
+    category: "offbeat"
+    type: "rss"
+
+  - name: "Slashdot"
+    url: "https://rss.slashdot.org/Slashdot/slashdotMain"
+    category: "tech"
+    type: "rss"
+
+  - name: "Product Hunt"
+    url: "https://www.producthunt.com/feed"
+    category: "tech"
+    type: "rss"
+
+  - name: "Hackaday"
+    url: "https://hackaday.com/blog/feed/"
+    category: "tech"
+    type: "rss"
+
+  - name: "Lobsters"
+    url: "https://lobste.rs/rss"
+    category: "tech"
+    type: "rss"
+
+  - name: "404 Media"
+    url: "https://www.404media.co/feed/"
+    category: "tech"
+    type: "rss"
+
+# 采集参数
+settings:
+  max_per_source: 20
+  request_timeout: 15
+  user_agent: "Mozilla/5.0 (compatible; NewsBot/1.0)"

@@ -8,6 +8,11 @@ venv/
 # 数据产出
 data/*
 !data/.gitkeep
+news/data/
+dangdang_scrapy/data/
 
 # Cookie 持久化
 cookies.pkl
+
+# API Key（切勿提交到 git）
+**/api_key.txt
