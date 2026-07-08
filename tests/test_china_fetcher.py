@@ -29,7 +29,7 @@ class TestFetchBeijing:
         mock_response.status_code = 200
         mock_response.text = html
 
-        with patch("weather.china_fetcher.requests.Session.get", return_value=mock_response):
+        with patch("weather.china_fetcher.tls_get", return_value=mock_response):
             result = fetch("101010100")
 
         assert len(result) == 7
@@ -41,7 +41,7 @@ class TestFetchBeijing:
         mock_response.status_code = 200
         mock_response.text = html
 
-        with patch("weather.china_fetcher.requests.Session.get", return_value=mock_response):
+        with patch("weather.china_fetcher.tls_get", return_value=mock_response):
             result = fetch("101010100")
 
         for day in result:
@@ -61,7 +61,7 @@ class TestFetchBeijing:
         mock_response.status_code = 200
         mock_response.text = html
 
-        with patch("weather.china_fetcher.requests.Session.get", return_value=mock_response):
+        with patch("weather.china_fetcher.tls_get", return_value=mock_response):
             result = fetch("101010100")
 
         for day in result:
@@ -75,7 +75,7 @@ class TestFetchBeijing:
         mock_response.status_code = 200
         mock_response.text = html
 
-        with patch("weather.china_fetcher.requests.Session.get", return_value=mock_response):
+        with patch("weather.china_fetcher.tls_get", return_value=mock_response):
             result = fetch("101010100")
 
         for day in result:
@@ -92,7 +92,7 @@ class TestFetchShanghai:
         mock_response.status_code = 200
         mock_response.text = html
 
-        with patch("weather.china_fetcher.requests.Session.get", return_value=mock_response):
+        with patch("weather.china_fetcher.tls_get", return_value=mock_response):
             result = fetch("101020100")
 
         for day in result:
@@ -112,13 +112,13 @@ class TestFetchErrors:
         mock_response = Mock()
         mock_response.status_code = 404
 
-        with patch("weather.china_fetcher.requests.Session.get", return_value=mock_response):
+        with patch("weather.china_fetcher.tls_get", return_value=mock_response):
             with pytest.raises(RuntimeError, match="404"):
                 fetch("101010100")
 
     def test_network_error(self):
         """网络不可达抛 ConnectionError。"""
-        with patch("weather.china_fetcher.requests.Session.get",
+        with patch("weather.china_fetcher.tls_get",
                    side_effect=requests.exceptions.ConnectionError()):
             with pytest.raises(ConnectionError, match="网络"):
                 fetch("101010100")

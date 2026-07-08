@@ -12,12 +12,11 @@
 import re
 from datetime import datetime, timedelta, date
 
-import requests
 from bs4 import BeautifulSoup
 
 from common.proxy import get_proxies
 from common.retry import retry_on_network_error
-from common.session import create_session
+from common.tls import get as tls_get
 
 # 城市名 → 编码
 CITY_CODES = {
@@ -129,16 +128,11 @@ def fetch(city_code: str) -> list[dict]:
 
     url = f"{BASE_URL}/{city_code}.shtml"
 
-    session = create_session()
     try:
-        response = session.get(
-            url, proxies=get_proxies(), timeout=10
+        response = tls_get(
+            url, impersonate="chrome124", timeout=10, proxies=get_proxies()
         )
-    except requests.ConnectionError:
-        raise ConnectionError("网络连接失败，请检查网络。") from None
-    except requests.Timeout:
-        raise ConnectionError("请求中国天气网超时，请稍后重试。") from None
-    except requests.RequestException as e:
+    except Exception as e:
         raise ConnectionError(f"网络请求失败：{e}") from None
 
     if response.status_code != 200:

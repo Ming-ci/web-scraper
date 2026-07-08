@@ -13,6 +13,7 @@ dangdang_scrapy/data/
 
 # Cookie 持久化
 cookies.pkl
+**/cookies.json
 
 # API Key（切勿提交到 git）
 **/api_key.txt
