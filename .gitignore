@@ -18,5 +18,8 @@ cookies.pkl
 # API Key（切勿提交到 git）
 **/api_key.txt
 
+# 面试资料（本地仅参考）
+docs/interview-prep.md
+
 # 日志
 logs/
