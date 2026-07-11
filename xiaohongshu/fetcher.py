@@ -44,6 +44,12 @@ def _parse_item(item, scrape_time: str) -> dict | None:
         params = urllib.parse.parse_qs(parsed.query)
         xsec_token = params.get("xsec_token", [""])[0]
 
+    # 补全相对协议链接
+    if base_link.startswith("//"):
+        base_link = f"https:{base_link}"
+    elif base_link.startswith("/"):
+        base_link = f"https://www.xiaohongshu.com{base_link}"
+
     # 拼接完整链接
     link = base_link
     if xsec_token:
@@ -92,12 +98,16 @@ def from_search(keyword: str, scroll: int = 5) -> list[dict]:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context()
-        # 注入登录态 Cookie
+        # 注入登录态 Cookie（必须带 domain + path）
         if has_cookies():
-            context.add_cookies([
-                {"name": k, "value": v, "url": "https://www.xiaohongshu.com"}
-                for k, v in load_cookies().items()
-            ])
+            formatted = []
+            for k, v in load_cookies().items():
+                formatted.append({
+                    "name": k, "value": v,
+                    "domain": ".xiaohongshu.com",
+                    "path": "/",
+                })
+            context.add_cookies(formatted)
         page = context.new_page()
         apply_stealth(page)
         page.goto(url, wait_until="networkidle", timeout=30000)
