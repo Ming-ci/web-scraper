@@ -8,21 +8,24 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from common.logger import setup as log_setup, get_logger
 from news.crawlers.rss_fetcher import crawl, save_raw
 from news.ai_engine.translator import translate_all, save_all
 from news.ai_engine.drafter import draft
 
+logger = get_logger(__name__)
+
 
 def cmd_crawl() -> None:
     """爬取 RSS → data/raw/"""
-    print("正在采集 RSS 新闻...\n")
+    logger.info("开始采集 RSS 新闻...")
     items = crawl()
     if not items:
-        print("\n未获取到任何新闻。")
+        logger.error("未获取到任何新闻")
         sys.exit(1)
 
     path = save_raw(items)
-    print(f"\n完成！{len(items)} 条新闻已保存至 {path}")
+    logger.info("完成: %d 条 → %s", len(items), path)
 
 
 def cmd_translate(args) -> None:
@@ -67,6 +70,7 @@ def cmd_draft(args) -> None:
 
 
 def main() -> None:
+    log_setup()
     if sys.stdout.encoding != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
 

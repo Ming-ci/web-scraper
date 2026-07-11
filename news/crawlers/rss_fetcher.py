@@ -13,6 +13,9 @@ import httpx
 import yaml
 
 from common.headers import get_headers
+from common.logger import get_logger
+
+logger = get_logger(__name__)
 
 CONFIG_PATH = Path(__file__).parent.parent / "config" / "sources.yaml"
 RAW_DIR = Path(__file__).parent.parent / "data" / "raw"
@@ -40,7 +43,6 @@ def crawl() -> list[dict]:
         name = src["name"]
         url = src["url"]
         category = src["category"]
-        print(f"  {name} ({category})...", end=" ", flush=True)
 
         try:
             resp = httpx.get(url, headers=headers, timeout=settings.get("request_timeout", 15),
@@ -48,7 +50,7 @@ def crawl() -> list[dict]:
             resp.raise_for_status()
             feed = feedparser.parse(resp.text)
         except Exception as e:
-            print(f"失败: {e}")
+            logger.warning("%s (%s): 失败 — %s", name, category, e)
             continue
 
         count = 0
@@ -64,7 +66,7 @@ def crawl() -> list[dict]:
             }
             all_items.append(item)
             count += 1
-        print(f"{count} 条")
+        logger.info("%s (%s): %d 条", name, category, count)
 
     return all_items
 

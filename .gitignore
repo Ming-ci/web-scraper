@@ -17,3 +17,6 @@ cookies.pkl
 
 # API Key（切勿提交到 git）
 **/api_key.txt
+
+# 日志
+logs/
