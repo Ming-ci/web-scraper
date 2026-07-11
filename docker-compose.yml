@@ -2,6 +2,31 @@
 version: "3.8"
 
 services:
+  # === Redis — 分布式爬虫共享队列 ===
+  redis:
+    image: redis:7-alpine
+    container_name: scraper-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # === Scrapy-Redis Worker（可横向扩展） ===
+  worker:
+    build: .
+    container_name: scraper-worker
+    command: >
+      sh -c "pip install scrapy-redis redis &&
+             cd dangdang_scrapy_redis &&
+             scrapy crawl dangdang_redis"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379
+    restart: "no"
+    deploy:
+      replicas: 1  # 改为 3 即启动 3 个并行 worker
   # === 天气爬虫（定时任务示例） ===
   weather:
     build: .
@@ -59,6 +84,7 @@ services:
     restart: "no"
 
 volumes:
+  redis_data:
   weather_data:
   news_data:
   bilibili_data:
