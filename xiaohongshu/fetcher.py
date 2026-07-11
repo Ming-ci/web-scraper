@@ -84,13 +84,21 @@ def from_search(keyword: str, scroll: int = 5) -> list[dict]:
     """通过 Playwright 在线搜索小红书关键词。"""
     from playwright.sync_api import sync_playwright
     from common.stealth import apply_stealth
+    from xiaohongshu.auth import load_cookies, has_cookies
 
     url = f"https://www.xiaohongshu.com/search_result?keyword={keyword}&source=web_search_result_notes"
     scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+        context = browser.new_context()
+        # 注入登录态 Cookie
+        if has_cookies():
+            context.add_cookies([
+                {"name": k, "value": v, "url": "https://www.xiaohongshu.com"}
+                for k, v in load_cookies().items()
+            ])
+        page = context.new_page()
         apply_stealth(page)
         page.goto(url, wait_until="networkidle", timeout=30000)
 
