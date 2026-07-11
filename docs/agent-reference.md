@@ -47,6 +47,7 @@
 | API 调用拿列表 | `bilibili/wbi.py` + `up_videos.py` | 签名 + 翻页 + Excel导出 |
 | JS 渲染需要交互(点击/输入) | `bilibili/main.py` (排行榜) | Playwright + CSS选择器 |
 | RSS 聚合 + AI 处理 | `news/` | feedparser + AI pipeline |
+| 需要登录态 + JS渲染搜索 | `xiaohongshu/` | Playwright + Cookie + BS4解析 |
 | 需要登录态 | `bilibili/auth.py` | Playwright 扫码 + Cookie持久化 |
 | 需要框架化 | `dangdang_scrapy/` | Scrapy Spider + Pipeline |
 
@@ -100,7 +101,8 @@ tests/
 | 场景 | 代码 |
 |------|------|
 | 启动 | `browser = p.chromium.launch(headless=True)` |
-| 导航 | `page.goto(url, wait_until='networkidle')` |
+| 导航 | `page.goto(url, wait_until='networkidle')` — 若 timeout 改用 `domcontentloaded` |
+| Cookie注入 | `context.add_cookies([{name,value,domain,path}])` **必须带 domain+path** | 
 | 等待元素 | `page.wait_for_selector(sel, timeout=10000)` |
 | 点击 | `locator.click()` |
 | 输入 | `locator.fill('text')` |
@@ -132,7 +134,18 @@ wb.save(path)
 | 滚动加载 | Playwright `page.evaluate('window.scrollTo(...)')` + 计数器 |
 | 点击"加载更多" | Playwright `locator.click()` → `wait_for_selector` 循环 |
 
-## 10. B站特定经验
+## 10. 小红书特定经验
+
+- **搜索 URL**: `https://www.xiaohongshu.com/search_result?keyword={kw}&source=web_search_result_notes`
+- **DOM 结构**: `section.note-item` → `.title` / `.name` / `.time` / `.count` / `a.cover img` / `a:not([class])`
+- **封面图**: `a.cover img` 的 `src`，线上是真实 URL（`sns-webpic-qc.xhscdn.com`），本地保存是相对路径
+- **帖子链接**: `a:not([class])` 获取 `/explore/{id}` 基础链接，再从 `a.cover` 的 href 中提取 `xsec_token`，拼接完整 URL: `/explore/{id}?xsec_token=...&xsec_source=pc_search&source=web_explore_feed`
+- **Cookie 注入**: `context.add_cookies()` 必须带 `domain: ".xiaohongshu.com"` 和 `path: "/"`，不能用 `url` 字段
+- **登录检测**: 用轮询检测"登录"按钮是否消失，**不要用 `wait_for_url`**（当前 URL 已匹配立即返回，导致误判已登录）
+- **页面加载**: 用 `wait_until="domcontentloaded"` 而非 `networkidle`（小红书后台请求永不停止导致 timeout）
+- **搜索模式**: Playwright + stealth + Cookie 登录态，本地 HTML 用纯 BS4
+
+## 11. B站特定经验
 
 - **排行榜**: URL `/v/popular/rank`，分区通过**点击标签**切换（非 URL 参数），DOM 是 `li.rank-item`
 - **UP主空间页 HTML**: JS 动态渲染 + 登录墙，**不要用 Playwright 直接抓**，走 API
