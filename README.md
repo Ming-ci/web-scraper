@@ -1,6 +1,6 @@
 # Web Scraper — Python 爬虫项目
 
-七个爬虫项目，覆盖 `requests` → `BeautifulSoup` → `Playwright` → `Scrapy` → `AI 流水线` → `API 逆向` 全技术栈。
+八个爬虫项目，覆盖 `requests` → `BeautifulSoup` → `Playwright` → `Scrapy` → `AI 流水线` → `API 逆向` 全技术栈。
 
 ## 最新成果
 
@@ -15,6 +15,7 @@
 ├── weather/                   # 中国天气网 — requests + BS4（已升级 TLS 伪装）
 ├── dangdang/                  # 当当商品 — requests + BS4 (GBK)
 ├── dangdang_scrapy/           # 当当商品 — Scrapy 框架对比版
+├── xiaohongshu/               # 小红书 — 关键词搜索爬虫
 ├── bilibili/                  # B站 — 排行榜 + 排行榜分区 + UP 主投稿爬虫
 │   ├── main.py                #   排行榜 CLI
 │   ├── up_videos.py           #   UP 主投稿爬虫（API + Excel）
@@ -42,6 +43,17 @@ python -m bilibili.up_videos --file data/xxx.html --excel  # 本地 HTML 导出
 
 字段：标题、UP主、MID、BV号、播放量、发布日期。  
 技术要点：WBI 签名（img_key/sub_key 混排 + MD5）、`curl_cffi` TLS 指纹伪装、Playwright 扫码登录 + Cookie 持久化、`openpyxl` 格式化输出。
+
+### xiaohongshu — 小红书搜索 🆕
+
+从本地 HTML 文件或 Playwright 在线搜索小红书关键词，提取笔记数据。
+
+```bash
+python -m xiaohongshu.main file "data/旅游 - 小红书搜索.html" --excel
+python -m xiaohongshu.main search --keyword 旅游 --scroll 5 --excel
+```
+
+字段：标题、博主昵称、发布时间、点赞数、链接（含 xsec_token）、封面图、抓取时间。
 
 ### bilibili — B站排行榜
 
