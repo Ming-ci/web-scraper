@@ -1,0 +1,25 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.git/
+venv/
+.venv/
+
+# 数据产出
+data/
+news/data/
+dangdang_scrapy/data/
+
+# 敏感信息
+**/api_key.txt
+**/cookies.json
+**/cookies.pkl
+proxies.json
+
+# IDE
+.vscode/
+.idea/
+
+# 临时文件
+*.tmp
+*.log

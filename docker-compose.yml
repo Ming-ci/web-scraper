@@ -1,0 +1,64 @@
+# 爬虫项目编排 — 多服务独立运行，数据通过卷持久化
+version: "3.8"
+
+services:
+  # === 天气爬虫（定时任务示例） ===
+  weather:
+    build: .
+    container_name: weather-scraper
+    command: python -m weather.main collect
+    volumes:
+      - weather_data:/app/data
+      - ./weather:/app/weather:ro
+      - ./common:/app/common:ro
+    environment:
+      - TZ=Asia/Shanghai
+    # 每天凌晨 6 点运行（配合外部 cron 或 --restart + sleep 循环）
+    restart: "no"
+
+  # === AI 新闻流水线（crawl + translate） ===
+  news:
+    build: .
+    container_name: news-pipeline
+    command: python -m news.cli run --limit 30
+    volumes:
+      - news_data:/app/news/data
+      - ./news/config:/app/news/config:ro  # 源配置 + prompts
+      - ./common:/app/common:ro
+    environment:
+      - TZ=Asia/Shanghai
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+    restart: "no"
+
+  # === B站排行榜 ===
+  bilibili-rank:
+    build: .
+    container_name: bilibili-rank
+    command: python -m bilibili.main --category tech
+    volumes:
+      - bilibili_data:/app/data
+      - ./bilibili:/app/bilibili:ro
+      - ./common:/app/common:ro
+    environment:
+      - TZ=Asia/Shanghai
+    restart: "no"
+
+  # === B站 UP 主视频（需要先登录获取 Cookie） ===
+  bilibili-up:
+    build: .
+    container_name: bilibili-up
+    command: python -m bilibili.up_videos --mid ${UP_MID:-17076171} 50 --excel
+    volumes:
+      - bilibili_data:/app/data
+      - ./bilibili:/app/bilibili:ro
+      - ./common:/app/common:ro
+      # Cookie 文件需提前在宿主机生成
+      - ./bilibili/cookies.json:/app/bilibili/cookies.json:ro
+    environment:
+      - TZ=Asia/Shanghai
+    restart: "no"
+
+volumes:
+  weather_data:
+  news_data:
+  bilibili_data:
