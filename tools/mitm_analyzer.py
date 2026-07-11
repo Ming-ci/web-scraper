@@ -22,7 +22,6 @@ LOG_FILE = Path("data/api_log.json")
 
 
 def _append(entry: dict):
-    """追加一条记录到日志文件。"""
     existing = []
     if LOG_FILE.exists():
         try:
@@ -35,9 +34,7 @@ def _append(entry: dict):
 
 
 def request(flow: http.HTTPFlow) -> None:
-    """拦截请求 — 只记录 API 请求（跳过图片/CSS/JS）。"""
     url = flow.request.pretty_url
-    # 只关注 API 请求
     if any(kw in url for kw in ["/api/", "/x/", "json", "graphql"]):
         entry = {
             "timestamp": datetime.now().isoformat(),
@@ -50,7 +47,6 @@ def request(flow: http.HTTPFlow) -> None:
 
 
 def response(flow: http.HTTPFlow) -> None:
-    """拦截响应 — 补充响应信息到最近的 API 记录。"""
     url = flow.request.pretty_url
     if any(kw in url for kw in ["/api/", "/x/", "json"]):
         entry = {
