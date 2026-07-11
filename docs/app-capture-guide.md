@@ -92,10 +92,8 @@ resp = requests.get(url, params=signed_params, headers=headers)
 | HTTPS | ✅ | ✅ | ✅ |
 | 推荐度 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
 
-## 五、面试话术
+## 五、B站 App 抓包实例
 
-"我用 mitmproxy 抓取 App 的 API 请求，分析参数签名逻辑，
-然后写 Python 脚本直接调后端接口，跳过了 App 前端的加密层。
-比如 B站 UP 主视频接口，我逆向出它 WBI 签名的 img_key/sub_key 混排逻辑，
-用 curl_cffi 伪装 TLS 指纹，加 Cookie 登录态绕风控，
-实现了无需 App 就能批量获取任意 UP 主全部投稿数据。"
+用 mitmproxy 抓取 B站 App 的请求，发现其调用 `/x/space/wbi/arc/search` 接口，
+参数签名逻辑（WBI）已在项目中通过 `bilibili/wbi.py` 实现。
+配合 `curl_cffi` TLS 指纹伪装和 Cookie 登录态，可跳过 App 前端直接调用后端接口。

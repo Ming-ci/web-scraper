@@ -16,10 +16,6 @@
 
     # 付费 API
     solve("data/captcha.png", strategy="api", api_key="xxx")
-
-面试要点:
-    "简单验证码用 OCR，滑块类用 Playwright 模拟，
-     生产环境接 2captcha 付费 API，集成在 captcha.py 统一接口下。"
 """
 
 import base64
