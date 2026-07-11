@@ -110,7 +110,8 @@ def from_search(keyword: str, scroll: int = 5) -> list[dict]:
             context.add_cookies(formatted)
         page = context.new_page()
         apply_stealth(page)
-        page.goto(url, wait_until="networkidle", timeout=30000)
+        page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_timeout(3000)  # 给 JS 渲染时间
 
         try:
             page.wait_for_selector("section.note-item", timeout=15000)
