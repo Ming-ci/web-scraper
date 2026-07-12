@@ -11,7 +11,7 @@
 ## 项目结构
 
 ```
-├── common/                    # 反爬基础设施（7 模块：headers/throttle/retry/proxy/session/tls/stealth）
+├── common/                    # 反爬 + 工具（8 模块：7层反爬 + captcha验证码 + logger日志）
 ├── weather/                   # 中国天气网 — requests + BS4（已升级 TLS 伪装）
 ├── dangdang/                  # 当当商品 — requests + BS4 (GBK)
 ├── dangdang_scrapy/           # 当当商品 — Scrapy 框架对比版
@@ -25,8 +25,11 @@
 │   ├── crawlers/              #   14 源 RSS 采集
 │   ├── ai_engine/             #   DeepSeek 翻译/筛选/写稿
 │   └── cli.py                 #   CLI 入口
-├── playwright_demo/           # Playwright 8 个教学脚本（含 stealth 对比）
-└── tests/                     # 23 条单元测试
+├── dangdang_scrapy_redis/     # 当当商品 — Scrapy-Redis 分布式版
+├── playwright_demo/           # Playwright 8 个教学脚本（含 stealth/captcha 对比）
+├── tools/                     # 抓包工具（mitmproxy 内联脚本）
+├── docs/                      # 6 份技术文档
+└── tests/                     # 28 条单元测试
 ```
 
 ## 各项目说明
@@ -112,6 +115,45 @@ cd dangdang_scrapy && scrapy crawl dangdang
 | 6 | `tls` 🆕 | TLS 指纹伪装 (`curl_cffi`) | JA3/JA4 指纹检测 |
 | 7 | `stealth` 🆕 | 无头浏览器反检测 | `navigator.webdriver` 检测 |
 
+## 验证码处理
+
+`common/captcha.py` — 统一接口 `solve(source, strategy)`，三策略可选：
+
+| 策略 | 技术 | 适用 |
+|------|------|------|
+| OCR | Tesseract + Pillow 预处理 | 简单数字/文字验证码 |
+| Playwright | 缓动曲线拖拽 + y轴抖动 | 滑块验证码 |
+| API | 2captcha 付费平台（~$0.01/次） | 生产环境 |
+
+## 结构化日志
+
+`common/logger.py` — `RotatingFileHandler`（10MB × 3 备份），替代 `print()`：
+
+```
+2026-07-11 13:54:59 | INFO    | news.crawlers.rss_fetcher | Hacker News (tech): 20 条
+2026-07-11 13:55:01 | WARNING | news.crawlers.rss_fetcher | Reddit (offbeat): 失败 - timeout
+```
+
+## Scrapy-Redis 分布式
+
+将单机 Scrapy 改造为多机分布式只需改 3 处：继承 `RedisSpider`、设置 `redis_key`、Redis 调度器+去重。`docker-compose` 设 `replicas: 3` 即启动 3 个并行 Worker。
+
+```bash
+cd dangdang_scrapy_redis && scrapy crawl dangdang_redis
+docker-compose up --scale worker=3
+```
+
+## Docker 部署
+
+多阶段构建：builder 装 pip 包 → runtime 仅保留运行库 + Playwright Chromium。非 root 用户运行。
+
+```bash
+docker-compose up -d redis          # Redis 队列
+docker-compose run weather          # 天气爬虫
+docker-compose run news             # AI 新闻流水线
+docker-compose up --scale worker=3  # 分布式 Worker
+```
+
 ## B站 API 逆向要点
 
 | 技术 | 模块 | 说明 |
@@ -133,6 +175,7 @@ python -m pytest tests/ -v
 | `requests` + `BS4` | 静态 HTML | weather, dangdang |
 | `curl_cffi` | TLS 指纹强检测站 | weather (已升级), bilibili API |
 | `Scrapy` | 大规模框架化 | dangdang_scrapy |
-| `Playwright` | JS 动态渲染 | bilibili 排行榜, auth 登录 |
+| `Playwright` + Cookie | JS 动态渲染 + 登录态 | bilibili, xiaohongshu |
+| `Scrapy-Redis` | 分布式爬取 | dangdang_scrapy_redis |
 | `feedparser` + AI | RSS 聚合 + 内容生成 | news |
-| B站 WBI API | 公开接口逆向 | bilibili UP 主投稿 |
+| B站/小红书 API | 公开接口逆向 | bilibili UP 主, xiaohongshu 搜索 |
