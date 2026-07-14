@@ -1,6 +1,6 @@
 # Web Scraper — Python 爬虫项目
 
-八个爬虫项目，覆盖 `requests` → `BeautifulSoup` → `Playwright` → `Scrapy` → `AI 流水线` → `API 逆向` 全技术栈。
+九个爬虫项目，覆盖 `requests` → `BeautifulSoup` → `Playwright` → `Scrapy` → `AI 流水线` → `API 逆向` 全技术栈。
 
 ## 最新成果
 
@@ -15,6 +15,7 @@
 ├── weather/                   # 中国天气网 — requests + BS4（已升级 TLS 伪装）
 ├── dangdang/                  # 当当商品 — requests + BS4 (GBK)
 ├── dangdang_scrapy/           # 当当商品 — Scrapy 框架对比版
+├── amazon/                    # 亚马逊 — 在线搜索 + 本地双模式（curl_cffi）
 ├── xiaohongshu/               # 小红书 — 关键词搜索爬虫
 ├── bilibili/                  # B站 — 排行榜 + 排行榜分区 + UP 主投稿爬虫
 │   ├── main.py                #   排行榜 CLI
@@ -46,6 +47,15 @@ python -m bilibili.up_videos --file data/xxx.html --excel  # 本地 HTML 导出
 
 字段：标题、UP主、MID、BV号、播放量、发布日期。  
 技术要点：WBI 签名（img_key/sub_key 混排 + MD5）、`curl_cffi` TLS 指纹伪装、Playwright 扫码登录 + Cookie 持久化、`openpyxl` 格式化输出。
+
+### amazon — 亚马逊商品搜索 🆕
+
+`curl_cffi` TLS 伪装在线搜索 + 本地 HTML 双模式，提取 ASIN/标题/价格/评分/月销量/链接。
+
+```bash
+python -m amazon.main search --keyword Adidas --excel
+python -m amazon.main file "data/Amazon.com _ nike.html" --excel
+```
 
 ### xiaohongshu — 小红书搜索 🆕
 
@@ -173,7 +183,7 @@ python -m pytest tests/ -v
 | 引擎 | 适用场景 | 本项目案例 |
 |------|---------|----------|
 | `requests` + `BS4` | 静态 HTML | weather, dangdang |
-| `curl_cffi` | TLS 指纹强检测站 | weather (已升级), bilibili API |
+| `curl_cffi` | TLS 指纹强检测站 | weather, bilibili API, amazon |
 | `Scrapy` | 大规模框架化 | dangdang_scrapy |
 | `Playwright` + Cookie | JS 动态渲染 + 登录态 | bilibili, xiaohongshu |
 | `Scrapy-Redis` | 分布式爬取 | dangdang_scrapy_redis |
