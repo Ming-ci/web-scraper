@@ -32,46 +32,66 @@ def from_file(filepath: str, limit: int = None) -> list[dict]:
 
 
 def from_up_id(mid: str, limit: int = 30) -> list[dict]:
-    """通过 B站公开 API 获取 UP 主投稿视频信息。
+    """通过 B站公开 API 获取 UP 主投稿视频信息（多线程）。
 
+    先请求第 1 页确定总数 → 计算总页数 → 并发拉取剩余页。
     使用 WBI 签名 + TLS 指纹伪装，支持 Cookie 登录态绕过风控。
     """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     from bilibili.wbi import api_request
 
-    all_videos = []
-    page = 1
-
-    while len(all_videos) < limit:
-        result = api_request("/x/space/wbi/arc/search", {
+    def _parse_vlist(vlist: list) -> list[dict]:
+        """将 API 返回的 vlist 转为结构化 dict。"""
+        return [{
+            "title": v.get("title", ""),
+            "author": v.get("author", ""),
             "mid": str(mid),
-            "ps": "50",
-            "pn": str(page),
-            "order": "pubdate",
+            "bvid": v.get("bvid", ""),
+            "play": v.get("play", 0),
+            "created": datetime.fromtimestamp(v.get("created", 0)).strftime("%Y-%m-%d"),
+        } for v in vlist]
+
+    def _fetch_page(pn: int) -> tuple[int, list[dict]]:
+        """抓取单页，返回 (页码, 视频列表)。"""
+        result = api_request("/x/space/wbi/arc/search", {
+            "mid": str(mid), "ps": "50", "pn": str(pn), "order": "pubdate",
         })
-
-        code = result.get("code", -1)
-        if code != 0:
-            print(f"API 错误: {result.get('message', '未知')}")
-            break
-
         vlist = result.get("data", {}).get("list", {}).get("vlist", [])
-        if not vlist:
-            break
+        return (pn, _parse_vlist(vlist))
 
-        for v in vlist:
-            all_videos.append({
-                "title": v.get("title", ""),
-                "author": v.get("author", ""),
-                "mid": str(mid),
-                "bvid": v.get("bvid", ""),
-                "play": v.get("play", 0),
-                "created": datetime.fromtimestamp(v.get("created", 0)).strftime("%Y-%m-%d"),
-            })
+    # 1. 先请求第 1 页，确定总数
+    print(f"  第 1 页...", end=" ", flush=True)
+    p1_result = api_request("/x/space/wbi/arc/search", {
+        "mid": str(mid), "ps": "50", "pn": "1", "order": "pubdate",
+    })
+    p1_vlist = p1_result.get("data", {}).get("list", {}).get("vlist", [])
+    all_videos = _parse_vlist(p1_vlist)
+    print(f"{len(p1_vlist)} 条")
 
-        if len(vlist) < 50:
-            break
-        page += 1
+    # 计算总页数
+    total = p1_result.get("data", {}).get("page", {}).get("count", 0)
+    total_pages = min((total + 49) // 50, (limit + 49) // 50)
+    if total_pages <= 1:
+        return all_videos[:limit]
 
+    # 2. 并发拉取剩余页
+    remaining = list(range(2, total_pages + 1))
+    workers = min(4, len(remaining))  # 最多 4 线程
+    print(f"  并发拉取第 2-{total_pages} 页（{workers} 线程）...", end=" ", flush=True)
+
+    results_by_page = {1: all_videos}
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(_fetch_page, pn): pn for pn in remaining}
+        for future in as_completed(futures):
+            pn, vlist = future.result()
+            results_by_page[pn] = vlist
+
+    # 3. 按页码合并
+    for pn in sorted(results_by_page):
+        if pn > 1:
+            all_videos.extend(results_by_page[pn])
+
+    print(f"共 {len(all_videos)} 条")
     return all_videos[:limit]
 
 
