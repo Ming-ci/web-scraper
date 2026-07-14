@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from amazon.fetcher import from_file
+from amazon.fetcher import from_file, from_search
 from amazon.storage import to_csv, to_excel
 
 
@@ -12,18 +12,33 @@ def main() -> None:
         sys.stdout.reconfigure(encoding="utf-8")
 
     parser = argparse.ArgumentParser(description="亚马逊搜索爬虫")
-    parser.add_argument("path", help="本地 HTML 文件路径")
-    parser.add_argument("--limit", type=int, help="最多提取条数")
-    parser.add_argument("--excel", action="store_true", help="导出 Excel")
+    subparsers = parser.add_subparsers(dest="mode", help="模式")
+
+    p_file = subparsers.add_parser("file", help="从本地 HTML 提取")
+    p_file.add_argument("path", help="HTML 文件路径")
+    p_file.add_argument("--limit", type=int, help="最多提取条数")
+    p_file.add_argument("--excel", action="store_true", help="导出 Excel")
+
+    p_search = subparsers.add_parser("search", help="在线搜索（curl_cffi）")
+    p_search.add_argument("--keyword", default="Nike", help="搜索关键词")
+    p_search.add_argument("--limit", type=int, help="最多提取条数")
+    p_search.add_argument("--excel", action="store_true", help="导出 Excel")
+
     args = parser.parse_args()
 
-    data = from_file(args.path, limit=args.limit)
+    if args.mode == "file":
+        data = from_file(args.path, limit=args.limit)
+    elif args.mode == "search":
+        data = from_search(args.keyword, limit=args.limit)
+    else:
+        parser.print_help()
+        sys.exit(0)
 
     if not data:
         print("未获取到数据")
         sys.exit(1)
 
-    if args.excel:
+    if getattr(args, "excel", False):
         path = to_excel(data)
     else:
         path = to_csv(data)
