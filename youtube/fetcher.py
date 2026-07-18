@@ -93,59 +93,49 @@ def from_file(filepath: str, limit: int = None) -> list[dict]:
 
 
 def from_channel(channel_id: str, count: int = 30, proxy: str = None) -> list[dict]:
-    """在线爬取 YouTube 频道视频（RSS + curl_cffi）。
+    """在线爬取 YouTube 频道视频（yt-dlp 引擎）。
 
-    先获取频道 UC ID → RSS feed → 解析 XML。
-    注意：RSS 不含播放量，views 字段为空。
+    使用 yt-dlp 内部提取器，零反爬成本获取完整字段。
     """
-    from curl_cffi import requests as cr
+    import yt_dlp
 
     scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     proxy_arg = proxy or "http://127.0.0.1:7890"
+    url = f"https://www.youtube.com/@{channel_id}/videos" if not channel_id.startswith("UC") else \
+          f"https://www.youtube.com/channel/{channel_id}/videos"
 
-    # 1. 获取频道 UC ID（从 @handle）
-    if not channel_id.startswith("UC"):
-        page_url = f"https://www.youtube.com/@{channel_id}/videos"
-        resp = cr.get(page_url, impersonate="chrome124", proxy=proxy_arg, timeout=15)
-        m = re.search(r'"externalId":"(UC[\w-]+)"', resp.text)
-        if not m:
-            print("无法获取频道 UC ID")
-            return []
-        channel_id = m.group(1)
+    opts = {
+        "quiet": True,
+        "extract_flat": "in_playlist",
+        "playlistend": count,
+        "proxy": proxy_arg,
+    }
 
-    # 2. RSS feed
-    feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
-    resp = cr.get(feed_url, impersonate="chrome124", proxy=proxy_arg, timeout=15)
-    soup = BeautifulSoup(resp.text, "xml")
+    def _fmt_duration(sec):
+        if not sec: return ""
+        m, s = divmod(int(sec), 60)
+        return f"{m}:{s:02d}" if m < 60 else f"{m//60}:{m%60:02d}:{s:02d}"
+
+    def _fmt_views(n):
+        if not n: return ""
+        return f"{n:,}次观看" if isinstance(n, int) else str(n)
 
     results = []
-    seen = set()
-
-    for entry in soup.select("entry")[:count]:
-        title = entry.select_one("title")
-        link = entry.select_one("link")
-        pub = entry.select_one("published")
-        author = entry.select_one("author name")
-        duration_sec = ""
-        media_content = entry.select_one("media|content")
-        if media_content:
-            sec = int(media_content.get("duration", 0))
-            m, s = divmod(sec, 60)
-            duration_sec = f"{m}:{s:02d}"
-
-        href = link.get("href", "") if link else ""
-        link_url = href.split("&")[0] if href else ""
-
-        if link_url and link_url not in seen:
-            seen.add(link_url)
-            results.append({
-                "title": title.get_text() if title else "",
-                "views": "",  # RSS 不含播放量
-                "pub_time": pub.get_text() if pub else "",
-                "duration": duration_sec,
-                "link": link_url,
-                "channel": author.get_text() if author else channel_id,
-                "scrape_time": scrape_time,
-            })
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            channel_name = info.get("channel", channel_id)
+            for entry in info.get("entries", []) or []:
+                results.append({
+                    "title": entry.get("title", ""),
+                    "views": _fmt_views(entry.get("view_count")),
+                    "pub_time": "",  # flat模式不含日期，需单页抓取
+                    "duration": _fmt_duration(entry.get("duration")),
+                    "link": entry.get("url", "") or f"https://www.youtube.com/watch?v={entry.get('id','')}",
+                    "channel": entry.get("channel", channel_name),
+                    "scrape_time": scrape_time,
+                })
+    except Exception as e:
+        print(f"yt-dlp 失败: {e}")
 
     return results
