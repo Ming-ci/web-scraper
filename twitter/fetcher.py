@@ -1,9 +1,11 @@
-"""X(Twitter) 推文爬虫 — Playwright 动态渲染。
+"""X(Twitter) 推文爬虫 — Playwright 动态渲染，遵守 robots.txt + 频率限制。
 DOM: article[data-testid=\"tweet\"]
 """
 
 from datetime import datetime
 from bs4 import BeautifulSoup
+
+from twitter.compliance import delay, robots_allowed, get_user_agent
 
 
 def _parse_tweet(article, scrape_time: str) -> dict | None:
@@ -78,6 +80,10 @@ def from_user(username: str, count: int = 20) -> list[dict]:
     scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     url = f"https://x.com/{username}"
 
+    if not robots_allowed(url):
+        print(f"robots.txt 不允许爬取 {url}")
+        return []
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context()
@@ -101,13 +107,12 @@ def from_user(username: str, count: int = 20) -> list[dict]:
         page.goto(url, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(3000)
 
-        # 滚动加载更多
-        articles = []
+        # 滚动加载更多（遵守频率限制）
         for _ in range(max(count // 5, 5)):
+            delay()
             page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
             page.wait_for_timeout(1500)
-            current = page.locator('article[data-testid="tweet"]').all()
-            if len(current) >= count:
+            if len(page.locator('article[data-testid="tweet"]').all()) >= count:
                 break
 
         soup = BeautifulSoup(page.content(), "lxml")
