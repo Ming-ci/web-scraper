@@ -1,4 +1,4 @@
-"""YouTube爬虫 CLI。"""
+"""YouTube爬虫 CLI — 支持 yt-dlp / innertube / file 三种模式。"""
 import argparse, sys
 from youtube.fetcher import from_file, from_channel
 from youtube.storage import to_csv, to_excel
@@ -9,17 +9,23 @@ def main():
     sp = p.add_subparsers(dest="mode", help="模式")
     pf = sp.add_parser("file", help="本地HTML")
     pf.add_argument("path"); pf.add_argument("--excel", action="store_true")
-    ps = sp.add_parser("search", help="在线爬取(Playwright)")
+    ps = sp.add_parser("search", help="在线爬取")
     ps.add_argument("channel", help="频道ID")
     ps.add_argument("--count", type=int, default=30, help="爬取条数")
     ps.add_argument("--proxy", help="代理地址 如 http://127.0.0.1:7890")
+    ps.add_argument("--engine", choices=["yt-dlp", "innertube"], default="yt-dlp",
+                    help="引擎: yt-dlp(默认) / innertube(纯Python逆向)")
     ps.add_argument("--excel", action="store_true")
     args = p.parse_args()
 
     if args.mode=="file":
         data = from_file(args.path)
     elif args.mode=="search":
-        data = from_channel(args.channel, count=args.count, proxy=args.proxy)
+        if args.engine == "innertube":
+            from youtube.innertube import browse_channel
+            data = browse_channel(args.channel, count=args.count, proxy=args.proxy)
+        else:
+            data = from_channel(args.channel, count=args.count, proxy=args.proxy)
     else: p.print_help(); sys.exit(0)
 
     if not data: print("未获取到数据"); sys.exit(1)
