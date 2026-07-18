@@ -12,13 +12,14 @@ def main():
     ps = sp.add_parser("search", help="在线爬取(Playwright)")
     ps.add_argument("channel", help="频道ID")
     ps.add_argument("--count", type=int, default=30, help="爬取条数")
+    ps.add_argument("--proxy", help="代理地址 如 http://127.0.0.1:7890")
     ps.add_argument("--excel", action="store_true")
     args = p.parse_args()
 
     if args.mode=="file":
         data = from_file(args.path)
     elif args.mode=="search":
-        data = from_channel(args.channel, count=args.count)
+        data = from_channel(args.channel, count=args.count, proxy=args.proxy)
     else: p.print_help(); sys.exit(0)
 
     if not data: print("未获取到数据"); sys.exit(1)

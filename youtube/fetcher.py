@@ -92,35 +92,60 @@ def from_file(filepath: str, limit: int = None) -> list[dict]:
     return results
 
 
-def from_channel(channel_id: str, count: int = 30) -> list[dict]:
-    """在线爬取 YouTube 频道视频（Playwright 滚动加载）。"""
-    from playwright.sync_api import sync_playwright
+def from_channel(channel_id: str, count: int = 30, proxy: str = None) -> list[dict]:
+    """在线爬取 YouTube 频道视频（RSS + curl_cffi）。
 
-    url = f"https://www.youtube.com/@{channel_id}/videos"
+    先获取频道 UC ID → RSS feed → 解析 XML。
+    注意：RSS 不含播放量，views 字段为空。
+    """
+    from curl_cffi import requests as cr
+
     scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    proxy_arg = proxy or "http://127.0.0.1:7890"
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto(url, wait_until="domcontentloaded", timeout=30000)
-        page.wait_for_timeout(3000)
+    # 1. 获取频道 UC ID（从 @handle）
+    if not channel_id.startswith("UC"):
+        page_url = f"https://www.youtube.com/@{channel_id}/videos"
+        resp = cr.get(page_url, impersonate="chrome124", proxy=proxy_arg, timeout=15)
+        m = re.search(r'"externalId":"(UC[\w-]+)"', resp.text)
+        if not m:
+            print("无法获取频道 UC ID")
+            return []
+        channel_id = m.group(1)
 
-        # 滚动加载
-        for _ in range(max(count // 10, 3)):
-            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-            page.wait_for_timeout(2000)
-            if len(page.locator("a#video-title").all()) >= count:
-                break
-
-        soup = BeautifulSoup(page.content(), "lxml")
-        browser.close()
+    # 2. RSS feed
+    feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+    resp = cr.get(feed_url, impersonate="chrome124", proxy=proxy_arg, timeout=15)
+    soup = BeautifulSoup(resp.text, "xml")
 
     results = []
     seen = set()
-    for item in soup.select("ytd-video-renderer"):
-        data = _parse_item(item, scrape_time)
-        if data and data["title"] and data["link"] not in seen:
-            seen.add(data["link"])
-            results.append(data)
 
-    return results[:count]
+    for entry in soup.select("entry")[:count]:
+        title = entry.select_one("title")
+        link = entry.select_one("link")
+        pub = entry.select_one("published")
+        author = entry.select_one("author name")
+        duration_sec = ""
+        media_content = entry.select_one("media|content")
+        if media_content:
+            sec = int(media_content.get("duration", 0))
+            m, s = divmod(sec, 60)
+            duration_sec = f"{m}:{s:02d}"
+
+        href = link.get("href", "") if link else ""
+        link_url = href.split("&")[0] if href else ""
+
+        if link_url and link_url not in seen:
+            seen.add(link_url)
+            results.append({
+                "title": title.get_text() if title else "",
+                "views": "",  # RSS 不含播放量
+                "pub_time": pub.get_text() if pub else "",
+                "duration": duration_sec,
+                "link": link_url,
+                "channel": author.get_text() if author else channel_id,
+                "scrape_time": scrape_time,
+            })
+
+    return results
