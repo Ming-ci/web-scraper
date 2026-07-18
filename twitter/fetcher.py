@@ -75,7 +75,6 @@ def from_user(username: str, count: int = 20) -> list[dict]:
     """爬取指定用户的推文（Playwright + Cookie 登录态）。"""
     from playwright.sync_api import sync_playwright
     from common.stealth import apply_stealth
-    from twitter.auth import load_cookies, has_cookies
 
     scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     url = f"https://x.com/{username}"
@@ -85,22 +84,11 @@ def from_user(username: str, count: int = 20) -> list[dict]:
         return []
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
-
-        if has_cookies():
-            cookies = load_cookies()
-            if isinstance(cookies, dict):
-                cookies = [{"name": k, "value": v} for k, v in cookies.items()]
-            formatted = []
-            for c in cookies:
-                if c.get("name") and c.get("value"):
-                    formatted.append({
-                        "name": c["name"], "value": c["value"],
-                        "domain": ".x.com", "path": "/",
-                    })
-            if formatted:
-                context.add_cookies(formatted)
+        # 持久化上下文（与登录同 Profile，自动复用 Cookie）
+        from twitter.auth import PROFILE_DIR
+        PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+        context = p.chromium.launch_persistent_context(
+            user_data_dir=str(PROFILE_DIR), headless=True)
 
         page = context.new_page()
         apply_stealth(page)
@@ -116,8 +104,8 @@ def from_user(username: str, count: int = 20) -> list[dict]:
                 break
 
         soup = BeautifulSoup(page.content(), "lxml")
-        articles = soup.select('article[data-testid="tweet"]')
-        browser.close()
+    articles = soup.select('article[data-testid="tweet"]')
+    context.close()
 
     results = []
     seen = set()

@@ -1,4 +1,4 @@
-"""X(Twitter)登录态 — Playwright 手动登录。"""
+"""X(Twitter)登录态 — 持久化 Chrome Profile，绕过 bot 检测。"""
 
 import json
 from pathlib import Path
@@ -6,15 +6,19 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 COOKIE_FILE = Path(__file__).parent / "cookies.json"
+PROFILE_DIR = Path(__file__).parent / "chrome_profile"
 
 
 def login() -> bool:
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-        context = browser.new_context()
+        # 持久化浏览器上下文（与正常 Chrome 行为完全一致）
+        PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+        context = p.chromium.launch_persistent_context(
+            user_data_dir=str(PROFILE_DIR),
+            headless=False,
+            viewport={"width": 1280, "height": 900},
+        )
         page = context.new_page()
-        from common.stealth import apply_stealth
-        apply_stealth(page)
         page.goto("https://x.com/login", timeout=15000)
 
         print("请在浏览器中登录 X(Twitter)（邮箱 → 密码 → 验证码）")
@@ -22,7 +26,7 @@ def login() -> bool:
         input()
 
         cookies = context.cookies()
-        browser.close()
+        context.close()
 
         names = {c["name"] for c in cookies}
         if "auth_token" not in names:
@@ -46,8 +50,7 @@ def load_cookies() -> dict[str, str]:
 def has_cookies() -> bool:
     if not COOKIE_FILE.exists():
         return False
-    cookies = load_cookies()
-    return "auth_token" in cookies
+    return "auth_token" in load_cookies()
 
 
 if __name__ == "__main__":
