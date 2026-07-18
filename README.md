@@ -48,6 +48,18 @@ python -m bilibili.up_videos --file data/xxx.html --excel  # 本地 HTML 导出
 字段：标题、UP主、MID、BV号、播放量、发布日期。  
 技术要点：WBI 签名（img_key/sub_key 混排 + MD5）、`curl_cffi` TLS 指纹伪装、Playwright 扫码登录 + Cookie 持久化、`openpyxl` 格式化输出。
 
+### youtube — YouTube 频道视频 🆕
+
+双引擎设计：yt-dlp（生产级，全字段）/ InnerTube API 逆向（纯 Python，零依赖）。
+
+```bash
+python -m youtube.main search gimai_seikatsu --count 50 --excel
+python -m youtube.main search gimai_seikatsu --engine innertube --count 50
+python -m youtube.main file "data/泛式FunShiki - YouTube.html" --excel
+```
+
+逆向要点：首页 `ytcfg.INNERTUBE_API_KEY` → SAPISID Cookie → SHA1 鉴权头 → `youtubei/v1/browse` → `lockupViewModel` 解析。
+
 ### amazon — 亚马逊商品搜索 🆕
 
 `curl_cffi` TLS 伪装在线搜索 + 本地 HTML 双模式，提取 ASIN/标题/价格/评分/月销量/链接。
