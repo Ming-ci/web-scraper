@@ -48,6 +48,7 @@
 | JS 渲染需要交互(点击/输入) | `bilibili/main.py` (排行榜) | Playwright + CSS选择器 |
 | RSS 聚合 + AI 处理 | `news/` | feedparser + AI pipeline |
 | 需要登录态 + JS渲染搜索 | `xiaohongshu/` | Playwright + Cookie + BS4解析 |
+| API 逆向 + bot检测强 | `youtube/` | InnerTube 逆向 或 yt-dlp引擎 |
 | 需要登录态 | `bilibili/auth.py` | Playwright 扫码 + Cookie持久化 |
 | 需要框架化 | `dangdang_scrapy/` | Scrapy Spider + Pipeline |
 
@@ -153,7 +154,22 @@ wb.save(path)
 - **风控**: 连续 API 调用触发 code:-352，需要 `bilibili/auth.py` 登录后获取 Cookie
 - **UP主 mid**: 从 `space.bilibili.com/{mid}` URL 获取，或从 HTML 的 `<a href="space.bilibili.com/...">` 提取
 
-## 11. 新任务清单
+## 11. YouTube / InnerTube API 逆向
+
+- **首页 ytcfg**: `ytcfg.set({...})` 含 `INNERTUBE_API_KEY`, `INNERTUBE_CONTEXT`, `VISITOR_DATA`
+- **鉴权公式**: `SAPISIDHASH = "{timestamp}_{sha1(ts + SAPISID + origin)}"` — SAPISID 从 Cookie 提取
+- **API 端点**: `POST youtubei/v1/browse?key={api_key}` → body=`{context, browseId:UCxxx}`
+- **数据格式**: YouTube 2026 新版使用 `lockupViewModel`（非旧版 `videoRenderer`）
+- **解析 lockupViewModel**: 
+  - title → `metadata.lockupMetadataViewModel.title.content`
+  - duration → `overlays[].thumbnailBottomOverlayViewModel.badges[].thumbnailBadgeViewModel.text`
+  - views/time → `metadata.lockupMetadataViewModel.metadata.content.rows`
+  - videoId → 从封面图 URL 正则 `/vi/(\w+)/`
+- **双引擎策略**: yt-dlp（生产，全字段）+ InnerTube 逆向（面试展示，零依赖）
+- **bot 检测**: YouTube 对 curl_cffi/Playwright 均有强检测，`ytInitialData` 虽在 HTML 中但无 `videoRenderer`，走 InnerTube API 是唯一可靠路径。
+- **代理**: 国内需配置代理访问，Playwright `launch` 参数 `proxy={"server": "http://127.0.0.1:7890"}` 或 curl_cffi `proxy=` 参数
+
+## 12. 新任务清单
 
 收到新的抓取 URL 时，按序执行：
 
