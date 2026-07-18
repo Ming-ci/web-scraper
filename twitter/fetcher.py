@@ -72,6 +72,7 @@ def _get_stat(article, testid: str) -> str:
 def from_user(username: str, count: int = 20) -> list[dict]:
     """爬取指定用户的推文（Playwright + Cookie 登录态）。"""
     from playwright.sync_api import sync_playwright
+    from common.stealth import apply_stealth
     from twitter.auth import load_cookies, has_cookies
 
     scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -82,11 +83,21 @@ def from_user(username: str, count: int = 20) -> list[dict]:
         context = browser.new_context()
 
         if has_cookies():
-            formatted = [{"name": k, "value": v, "domain": ".x.com", "path": "/"}
-                         for k, v in load_cookies().items()]
-            context.add_cookies(formatted)
+            cookies = load_cookies()
+            if isinstance(cookies, dict):
+                cookies = [{"name": k, "value": v} for k, v in cookies.items()]
+            formatted = []
+            for c in cookies:
+                if c.get("name") and c.get("value"):
+                    formatted.append({
+                        "name": c["name"], "value": c["value"],
+                        "domain": ".x.com", "path": "/",
+                    })
+            if formatted:
+                context.add_cookies(formatted)
 
         page = context.new_page()
+        apply_stealth(page)
         page.goto(url, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(3000)
 
