@@ -20,7 +20,9 @@ def from_file(filepath: str, limit: int = None) -> list[dict]:
     titles = titles[:len(price_els)] if len(titles) >= len(price_els) else titles + [""] * (len(price_els) - len(titles))
     shops  = [el.get_text(strip=True) for el in soup.select("[class*=shopNameText]")]
     sales  = [el.get_text(strip=True) for el in soup.select("[class*=realSales]")]
-    link_els = soup.select("a[href*=\"item.taobao\"], a[href*=\"detail.tmall\"]")
+    link_els = [a for a in soup.select("a[target=\"_blank\"]")
+                if ("item.taobao" in a.get("href","") or "detail.tmall" in a.get("href",""))
+                and "simba" not in a.get("href","")]
 
     # 为每个价格匹配最近的链接（按 DOM 先后顺序对齐）
     # 策略：遍历价格列表，为每个价格找 DOM 中下一个链接
