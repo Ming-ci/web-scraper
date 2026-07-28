@@ -21,23 +21,34 @@ def _parse_item(item, scrape_time: str) -> dict | None:
     shop = ""
 
     for p in parts:
-        if len(p) < 4:
+        if len(p) < 2:
             continue
-        if "¥" in p or "￥" in p or re.match(r"^\d+\.\d{2}$", p):
-            price = p
-        elif "人付款" in p or "人收货" in p:
-            sales = p
-        elif "天猫" in p or "淘宝" in p:
-            pass
-        elif len(p) > 6 and "¥" not in p and "人付款" not in p:
+        # 价格：含 ¥ 或纯数字价格
+        if "¥" in p:
+            if not price:
+                m = re.search(r"¥\s*([\d,.]+)\s*(补贴后)?", p)
+                price = m.group(0) if m else p[:20]
+            continue
+        # 销量
+        if "人付款" in p:
+            if not sales:
+                m = re.search(r"(\d+[万+]?\+?人付款)", p)
+                sales = m.group(1) if m else p[:20]
+            continue
+        # 店铺（省/市格式）
+        if re.match(r"^[一-鿿]{2,4}[省市]$", p) and len(p) < 6:
+            shop = p
+            continue
+        # 标题：较长文本且非价格/销量
+        if len(p) > 4 and len(p) < 200 and "¥" not in p and "人付款" not in p:
             if not title:
                 title = p
 
+    # 链接
     link = ""
     for a in item.select("a[href]"):
         href = a.get("href", "")
-        if ("item.taobao.com" in href or "detail.tmall.com" in href
-                or "click.simba.taobao.com" in href):
+        if ("item.taobao.com" in href or "detail.tmall.com" in href):
             link = href if href.startswith("http") else f"https:{href}"
             break
 
@@ -55,38 +66,29 @@ def from_file(filepath: str, limit: int = None) -> list[dict]:
         soup = BeautifulSoup(f.read(), "lxml")
 
     scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    # 尝试多种选择器定位商品卡片
-    items = []
-    for sel in [
-        "div[class*=Card--doubleCard]", "[class*=Content--contentInner]",
-        ".J_Item", "[class*=ItemWrap]", "div.ctx-box div[class*=item]",
-        "div[class*=grid] > div > div", "div[class*=item]",
-    ]:
-        cards = soup.select(sel)
-        if 5 <= len(cards) <= 200:
-            items = cards
-            break
 
-    if not items:
-        # 无匹配选择器，按价格 ¥ 反向找父元素
+    # 淘宝卡片: div.content--CUnfXXxv（class 后缀可能变化）
+    cards = soup.select("div[class*=content--]")
+    cards = [c for c in cards if 100 < len(c.get_text(strip=True)) < 500]
+
+    if not cards:
+        # 备用: 按价格找父元素
         seen = set()
         for el in soup.select("*"):
             t = el.get_text(strip=True)
             if "¥" in t and "人付款" in t and len(t) < 300:
-                # 向上找合适容器
-                parent = el.parent
-                for _ in range(4):
-                    parent = parent.parent
-                    pid = id(parent)
-                    if pid not in seen and parent.get_text(strip=True).count("¥") == 1:
-                        seen.add(pid)
-                        items.append(parent)
-                        break
+                p = el
+                for _ in range(5):
+                    p = p.parent
+                pid = id(p)
+                if pid not in seen:
+                    seen.add(pid)
+                    cards.append(p)
 
     results = []
     seen_links = set()
-    for item in items:
-        data = _parse_item(item, scrape_time)
+    for card in cards:
+        data = _parse_item(card, scrape_time)
         if data and data["title"] and data["link"] not in seen_links:
             seen_links.add(data["link"])
             results.append(data)
