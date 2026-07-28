@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 CSV_COLUMNS = ["title", "price", "sales", "shop", "link", "scrape_time"]
-OUTPUT_DIR = Path(__file__).parent.parent / "data"
+OUTPUT_DIR = Path(__file__).parent.parent / "data" / "taobao"
 
 
 def to_csv(data, fp=None):

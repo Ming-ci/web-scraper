@@ -16,20 +16,28 @@ def from_file(filepath: str, limit: int = None) -> list[dict]:
         titles = [el.get_text(strip=True) for el in soup.select("[class*=title--]")
                   if len(el.get_text(strip=True)) > 15]
 
-    prices = [el.get_text(strip=True) for el in soup.select("[class*=priceInt]")]
+    price_els = soup.select("[class*=priceInt]")
+    titles = titles[:len(price_els)] if len(titles) >= len(price_els) else titles + [""] * (len(price_els) - len(titles))
     shops  = [el.get_text(strip=True) for el in soup.select("[class*=shopNameText]")]
     sales  = [el.get_text(strip=True) for el in soup.select("[class*=realSales]")]
-    links  = [a.get("href","").replace("&amp;","&") for a in
-              soup.select("a[href*=\"item.taobao\"], a[href*=\"detail.tmall\"]")]
+    link_els = soup.select("a[href*=\"item.taobao\"], a[href*=\"detail.tmall\"]")
 
+    # 为每个价格匹配最近的链接（按 DOM 先后顺序对齐）
+    # 策略：遍历价格列表，为每个价格找 DOM 中下一个链接
+    link_idx = 0
     results = []
-    for i in range(len(prices)):
+    for i in range(len(price_els)):
+        link = ""
+        if link_idx < len(link_els):
+            link = link_els[link_idx].get("href", "").replace("&amp;", "&")
+            link_idx += 1  # 每个链接只分配给一个价格
+
         results.append({
-            "title": titles[i] if i < len(titles) else "",
-            "price": prices[i],
+            "title": titles[i],
+            "price": price_els[i].get_text(strip=True),
             "shop":  shops[i] if i < len(shops) else "",
             "sales": sales[i] if i < len(sales) else "",
-            "link":  links[i] if i < len(links) else "",
+            "link":  link,
             "scrape_time": scrape_time,
         })
 
