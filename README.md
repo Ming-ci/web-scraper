@@ -10,18 +10,18 @@
 
 ## 技术能力矩阵
 
-| 能力维度 | 掌握程度 | 对应项目 |
-|---------|---------|---------|
-| 静态页面解析 | 熟练 | `weather` `dangdang` `amazon` |
-| 动态渲染采集 | 熟练 | `bilibili` `shufo` `xiaohongshu` |
-| API 逆向与签名 | 熟练 | `bilibili/wbi.py` `youtube/innertube.py` |
-| AI 辅助内容生产 | 掌握 | `news` (RSS→DeepSeek→脚本) |
-| 爬虫框架工程化 | 掌握 | `dangdang_scrapy` `dangdang_scrapy_redis` |
-| 容器化与部署 | 掌握 | `Dockerfile` `docker-compose.yml` |
-| 反爬对抗（7层） | 深入 | `common/` (headers→stealth) |
-| 验证码处理 | 了解 | `common/captcha.py` (OCR/滑块/API) |
-| 抓包与协议分析 | 了解 | `tools/mitm_analyzer.py` |
-| 测试与文档 | 掌握 | 28 条 pytest + 6 份技术文档 |
+| 能力维度 | 技术栈 | 对应项目 |
+|---------|-------|---------|
+| 静态页面解析 | `requests` `BeautifulSoup` `lxml` `curl_cffi` | `weather` `dangdang` `amazon` |
+| 动态渲染采集 | `Playwright` `Stealth.js` `持久化Profile` | `bilibili` `shufo` `xiaohongshu` `taobao` |
+| 爬虫框架工程化 | `Scrapy` `Scrapy-Redis` `Spider/Pipeline/Feed` | `dangdang_scrapy` `dangdang_scrapy_redis` |
+| API 逆向与签名 | `WBI签名` `InnerTube API` `SAPISID鉴权` | `bilibili/wbi.py` `youtube/innertube.py` |
+| 反爬对抗 | 7层对抗体系（headers→stealth） | `common/` |
+| AI 集成 | `DeepSeek API` `Prompt工程` `RSS聚合` | `news` |
+| 容器化部署 | `Docker` `docker-compose` `多阶段构建` | `Dockerfile` |
+| 验证码处理 | `OCR(Tesseract)` `Playwright滑块` `2captcha API` | `common/captcha.py` |
+| 抓包与协议分析 | `mitmproxy` `HTTPS代理` `证书信任链` | `tools/mitm_analyzer.py` |
+| 工程素养 | `pytest` `RotatingFileHandler` `openpyxl` `utf-8-sig` | `tests/` `common/logger.py` |
 
 ---
 
