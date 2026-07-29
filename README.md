@@ -1,203 +1,138 @@
-# Web Scraper — Python 爬虫项目
+# Python Web Scraper — 全栈爬虫工程实践
 
-九个爬虫项目，覆盖 `requests` → `BeautifulSoup` → `Playwright` → `Scrapy` → `AI 流水线` → `API 逆向` 全技术栈。
+> **求职意向：爬虫工程师 / 数据采集工程师**
+>
+> 独立开发，10 个子项目，覆盖 6 种技术引擎，7 层反爬对抗体系。
+> 从静态 HTML 解析到 API 逆向，从单机脚本到分布式架构，
+> 完整展示爬虫工程师所需的**全链路能力**。
 
-## 最新成果
+---
 
-- **反爬对抗升级**：TLS 指纹伪装（`curl_cffi`）+ Playwright 无头检测绕过（`stealth.js`），反爬栈增至 7 层
-- **B站 UP 主视频爬虫**：WBI 签名 + API 逆向 + Cookie 登录态 + Excel 导出，支持翻页爬取全部投稿
-- **AI 新闻流水线**：14 个海外 RSS 源 → DeepSeek 标题翻译 → 人工勾选 → 双版本视频脚本生成
+## 技术能力矩阵
 
-## 项目结构
+| 能力维度 | 掌握程度 | 对应项目 |
+|---------|---------|---------|
+| 静态页面解析 | 熟练 | `weather` `dangdang` `amazon` |
+| 动态渲染采集 | 熟练 | `bilibili` `shufo` `xiaohongshu` |
+| API 逆向与签名 | 熟练 | `bilibili/wbi.py` `youtube/innertube.py` |
+| AI 辅助内容生产 | 掌握 | `news` (RSS→DeepSeek→脚本) |
+| 爬虫框架工程化 | 掌握 | `dangdang_scrapy` `dangdang_scrapy_redis` |
+| 容器化与部署 | 掌握 | `Dockerfile` `docker-compose.yml` |
+| 反爬对抗（7层） | 深入 | `common/` (headers→stealth) |
+| 验证码处理 | 了解 | `common/captcha.py` (OCR/滑块/API) |
+| 抓包与协议分析 | 了解 | `tools/mitm_analyzer.py` |
+| 测试与文档 | 掌握 | 28 条 pytest + 6 份技术文档 |
+
+---
+
+## 项目架构
 
 ```
-├── common/                    # 反爬 + 工具（8 模块：7层反爬 + captcha验证码 + logger日志）
-├── weather/                   # 中国天气网 — requests + BS4（已升级 TLS 伪装）
-├── dangdang/                  # 当当商品 — requests + BS4 (GBK)
-├── dangdang_scrapy/           # 当当商品 — Scrapy 框架对比版
-├── amazon/                    # 亚马逊 — 在线搜索 + 本地双模式（curl_cffi）
-├── xiaohongshu/               # 小红书 — 关键词搜索爬虫
-├── bilibili/                  # B站 — 排行榜 + 排行榜分区 + UP 主投稿爬虫
-│   ├── main.py                #   排行榜 CLI
-│   ├── up_videos.py           #   UP 主投稿爬虫（API + Excel）
-│   ├── wbi.py                 #   WBI 签名引擎
-│   └── auth.py                #   扫码登录 + Cookie 管理
-├── news/                      # AI 新闻流水线 — RSS + DeepSeek
-│   ├── crawlers/              #   14 源 RSS 采集
-│   ├── ai_engine/             #   DeepSeek 翻译/筛选/写稿
-│   └── cli.py                 #   CLI 入口
-├── dangdang_scrapy_redis/     # 当当商品 — Scrapy-Redis 分布式版
-├── playwright_demo/           # Playwright 8 个教学脚本（含 stealth/captcha 对比）
-├── tools/                     # 抓包工具（mitmproxy 内联脚本）
-├── docs/                      # 6 份技术文档
-└── tests/                     # 28 条单元测试
+├── common/              # 反爬基础设施（7 层，可复用到任何项目）
+├── weather/             # 中国天气网 — requests + BS4
+├── dangdang/            # 当当商品 — requests + BS4 (GBK编码)
+├── dangdang_scrapy/     # 同上 — Scrapy 框架对比版
+├── dangdang_scrapy_redis/ # 同上 — Scrapy-Redis 分布式版
+├── bilibili/            # B站 — 排行榜 / UP主投稿 / WBI签名
+├── youtube/             # YouTube — yt-dlp引擎 + InnerTube逆向
+├── xiaohongshu/         # 小红书 — Playwright + Cookie登录态
+├── taobao/              # 淘宝 — CSS Module解析 + 品牌映射(34品牌)
+├── amazon/              # 亚马逊 — curl_cffi TLS伪装 + BS4
+├── shufo/               # 佛书网 — Playwright 动态渲染
+├── news/                # AI 新闻流水线 — 14源RSS → DeepSeek → 脚本
+├── tools/               # 辅助工具
+├── docs/                # 6 份技术文档
+└── tests/               # 28 条单元测试
 ```
 
-## 各项目说明
+---
 
-### bilibili — B站 UP 主投稿爬虫 🆕
+## 核心亮点
 
-通过 B站公开 API（WBI 签名 + TLS 伪装 + Cookie 登录态）爬取任意 UP 主全部投稿，支持 Excel 导出和自动翻页。
+### 1. 7 层反爬对抗体系（自研，可复用）
+
+从 HTTP 头伪装到 TLS 指纹伪造，每一层对抗一种检测手段：
+
+| 层 | 技术 | 对抗目标 |
+|---|------|---------|
+| 1 | 浏览器头随机轮换 | UA 特征检测 |
+| 2 | 随机延迟 (random.uniform) | 频率检测 |
+| 3 | 指数退避重试 (4xx/5xx区分) | 网络抖动 |
+| 4 | IP 代理池轮换 | IP 封禁 |
+| 5 | Session Cookie 管理 | 会话追踪 |
+| 6 | **TLS 指纹伪装 (curl_cffi)** | **JA3/JA4 检测** |
+| 7 | **无头浏览器反检测 (stealth.js)** | **navigator.webdriver** |
+
+**第 6 层实战验证：** 同一 URL，`requests` 返回 32KB（简化版），`curl_cffi` 返回 170KB（完整版）。服务器无 403 拦截，静默返回空数据——"无声拦截"是日常开发中最难排查的反爬手段。
+
+### 2. API 逆向（纯 Python，零依赖）
+
+**B站 WBI 签名：** 逆向 `img_key + sub_key → MIXIN_TABLE映射 → MD5签名` 完整链路，配合 TLS 伪装 + Cookie 登录态，绕过三层风控。
+
+**YouTube InnerTube：** 从 `ytcfg` 提取 API Key → SAPISID Cookie SHA1 鉴权 → `youtubei/v1/browse` 调用 → `lockupViewModel` 递归解析。不依赖 yt-dlp，完整还原 YouTube 前端 API 调用。
+
+### 3. 生产级架构思维
+
+- **Docker 多阶段构建：** builder → runtime 分层，非 root 用户运行
+- **docker-compose 编排：** 6 服务（含 Redis）一键启动，`replicas: 3` 横向扩展
+- **结构化日志：** RotatingFileHandler（10MB×3）替代 `print()`
+- **Scrapy-Redis 分布式：** 改 3 处即可从单机变多机（RedisSpider + Redis Scheduler + Redis Dedup）
+- **幂等存储：** CSV 按日期合并覆盖（天气）或链接去重（商品）
+
+### 4. AI 集成能力
+
+14 个海外 RSS 源 → DeepSeek 翻译 → 三维评估筛选（有趣/大众/吐槽）→ 双版本脚本生成（B站 5-10 分钟长视频 + 抖音 60-90 秒短视频）。Prompt 模板化，可配置频道风格。
+
+---
+
+## 项目列表
+
+| 项目 | 引擎 | 难度 | 核心挑战 |
+|------|------|------|---------|
+| taobao | BS4 | ⭐⭐⭐⭐⭐ | CSS Module 动态类名 + 浏览器自动化 |
+| youtube | yt-dlp/InnerTube | ⭐⭐⭐⭐ | API 鉴权逆向 + lockupViewModel 解析 |
+| xiaohongshu | Playwright | ⭐⭐⭐⭐ | Cookie 注入 + xesc_token 拼接 |
+| bilibili | API/Playwright | ⭐⭐⭐ | WBI 签名 + 风控绕过 + 多线程翻页 |
+| amazon | curl_cffi | ⭐⭐⭐ | TLS 指纹 + GBK 编码 + 跨语言页面 |
+| news | feedparser + AI | ⭐⭐⭐ | 14 源聚合 + Prompt 工程 |
+| weather | requests | ⭐⭐ | 合并覆盖存储 + matplotlib |
+| dangdang | requests/Scrapy | ⭐⭐ | GBK 解码 + Scrapy 对比 |
+| shufo | Playwright | ⭐⭐ | 动态渲染翻页 |
+| dangdang_redis | Scrapy-Redis | ⭐⭐⭐ | 分布式队列改造 |
+
+---
+
+## 快速开始
 
 ```bash
-python -m bilibili.auth                                    # 扫码登录（一次性）
-python -m bilibili.up_videos --mid 17076171 100 --excel    # 翻页爬取 + 导出 Excel
-python -m bilibili.up_videos --file data/xxx.html --excel  # 本地 HTML 导出
-```
+pip install -r requirements.txt
+playwright install chromium
 
-字段：标题、UP主、MID、BV号、播放量、发布日期。  
-技术要点：WBI 签名（img_key/sub_key 混排 + MD5）、`curl_cffi` TLS 指纹伪装、Playwright 扫码登录 + Cookie 持久化、`openpyxl` 格式化输出。
-
-### youtube — YouTube 频道视频 🆕
-
-双引擎设计：yt-dlp（生产级，全字段）/ InnerTube API 逆向（纯 Python，零依赖）。
-
-```bash
+# 在线抓取示例
 python -m youtube.main search gimai_seikatsu --count 50 --excel
-python -m youtube.main search gimai_seikatsu --engine innertube --count 50
-python -m youtube.main file "data/泛式FunShiki - YouTube.html" --excel
-```
+python -m bilibili.up_videos --mid 946974 100 --excel
+python -m news.cli run --limit 30
 
-逆向要点：首页 `ytcfg.INNERTUBE_API_KEY` → SAPISID Cookie → SHA1 鉴权头 → `youtubei/v1/browse` → `lockupViewModel` 解析。
+# 本地 HTML 解析示例
+python -m taobao.main "data/taobao/xxx.html" --excel
+python -m amazon.main file "data/amazon/xxx.html" --excel
 
-### amazon — 亚马逊商品搜索 🆕
-
-`curl_cffi` TLS 伪装在线搜索 + 本地 HTML 双模式，提取 ASIN/标题/价格/评分/月销量/链接。
-
-```bash
-python -m amazon.main search --keyword Adidas --excel
-python -m amazon.main file "data/Amazon.com _ nike.html" --excel
-```
-
-### xiaohongshu — 小红书搜索 🆕
-
-从本地 HTML 文件或 Playwright 在线搜索小红书关键词，提取笔记数据。
-
-```bash
-python -m xiaohongshu.main file "data/旅游 - 小红书搜索.html" --excel
-python -m xiaohongshu.main search --keyword 旅游 --scroll 5 --excel
-```
-
-字段：标题、博主昵称、发布时间、点赞数、链接（含 xsec_token）、封面图、抓取时间。
-
-### bilibili — B站排行榜
-
-Playwright 浏览器自动化，点击分区标签抓取排行榜前 100 名。
-
-```bash
-python -m bilibili.main --category tech        # 科技分区
-python -m bilibili.main --category digital     # 数码分区
-```
-
-字段：标题、UP 主、播放量、点赞数、排名、分区、视频链接、封面图、抓取时间。
-
-### news — AI 新闻流水线 🆕
-
-14 个海外 RSS 源 → AI 标题翻译 → 人工勾选 → AI 写双版本脚本（B站长视频 + 抖音短视频）。
-
-```bash
-python -m news.cli run --limit 50    # crawl + translate 一键
-python -m news.cli translate         # 仅翻译标题
-python -m news.cli draft             # 为勾选选题生成脚本
-```
-
-RSS 源包括：Hacker News、TechCrunch、The Verge、Ars Technica、Wired、The Register、Engadget、9to5Mac、Boing Boing、Slashdot、Product Hunt、Hackaday、Lobsters、404 Media。  
-配置：`news/config/sources.yaml` + `news/config/prompts.yaml`。  
-API Key：写入 `news/config/api_key.txt` 或环境变量 `DEEPSEEK_API_KEY`。
-
-### weather — 中国天气网
-
-5 城 7 天预报批量抓取，CSV 合并覆盖，matplotlib 趋势图。**已升级为 TLS 指纹伪装**（`curl_cffi` 替代 `requests`）。
-
-```bash
-python -m weather.main collect    # 抓取 → data/weather.csv
-python -m weather.main chart      # CSV → data/trend.png
-```
-
-### dangdang / dangdang_scrapy — 当当商品搜索
-
-两个版本对比学习：手写 `requests + BS4` vs `Scrapy` 框架（Spider + Pipeline + Feed）。
-
-```bash
-python -m dangdang.main --keyword Python --pages 3
-cd dangdang_scrapy && scrapy crawl dangdang
-```
-
-## 反爬基础设施
-
-`common/` 对所有 HTTP 爬虫通用，已升级至 7 层：
-
-| 层 | 模块 | 技术 | 对抗目标 |
-|---|------|------|---------|
-| 1 | `headers` | 浏览器头伪装 | 基础 UA 检测 |
-| 2 | `throttle` | 请求间隔随机延迟 | 频率检测 |
-| 3 | `retry` | 指数退避 + 抖动 | 网络抖动 |
-| 4 | `proxy` | IP 代理池轮换 | IP 封禁 |
-| 5 | `session` | Cookie 会话管理 | 会话追踪 |
-| 6 | `tls` 🆕 | TLS 指纹伪装 (`curl_cffi`) | JA3/JA4 指纹检测 |
-| 7 | `stealth` 🆕 | 无头浏览器反检测 | `navigator.webdriver` 检测 |
-
-## 验证码处理
-
-`common/captcha.py` — 统一接口 `solve(source, strategy)`，三策略可选：
-
-| 策略 | 技术 | 适用 |
-|------|------|------|
-| OCR | Tesseract + Pillow 预处理 | 简单数字/文字验证码 |
-| Playwright | 缓动曲线拖拽 + y轴抖动 | 滑块验证码 |
-| API | 2captcha 付费平台（~$0.01/次） | 生产环境 |
-
-## 结构化日志
-
-`common/logger.py` — `RotatingFileHandler`（10MB × 3 备份），替代 `print()`：
-
-```
-2026-07-11 13:54:59 | INFO    | news.crawlers.rss_fetcher | Hacker News (tech): 20 条
-2026-07-11 13:55:01 | WARNING | news.crawlers.rss_fetcher | Reddit (offbeat): 失败 - timeout
-```
-
-## Scrapy-Redis 分布式
-
-将单机 Scrapy 改造为多机分布式只需改 3 处：继承 `RedisSpider`、设置 `redis_key`、Redis 调度器+去重。`docker-compose` 设 `replicas: 3` 即启动 3 个并行 Worker。
-
-```bash
-cd dangdang_scrapy_redis && scrapy crawl dangdang_redis
-docker-compose up --scale worker=3
-```
-
-## Docker 部署
-
-多阶段构建：builder 装 pip 包 → runtime 仅保留运行库 + Playwright Chromium。非 root 用户运行。
-
-```bash
-docker-compose up -d redis          # Redis 队列
-docker-compose run weather          # 天气爬虫
-docker-compose run news             # AI 新闻流水线
-docker-compose up --scale worker=3  # 分布式 Worker
-```
-
-## B站 API 逆向要点
-
-| 技术 | 模块 | 说明 |
-|------|------|------|
-| WBI 签名 | `bilibili/wbi.py` | img_key + sub_key → 混排 → MD5 签名 |
-| TLS 伪装 | `common/tls.py` | `curl_cffi` 模拟 Chrome 124 TLS 指纹 |
-| 登录态 | `bilibili/auth.py` | Playwright 扫码 → Cookie 持久化 → 注入 API |
-
-## 测试
-
-```bash
+# 测试
 python -m pytest tests/ -v
 ```
 
-## 技术栈对照
+---
 
-| 引擎 | 适用场景 | 本项目案例 |
-|------|---------|----------|
-| `requests` + `BS4` | 静态 HTML | weather, dangdang |
-| `curl_cffi` | TLS 指纹强检测站 | weather, bilibili API, amazon |
-| `Scrapy` | 大规模框架化 | dangdang_scrapy |
-| `Playwright` + Cookie | JS 动态渲染 + 登录态 | bilibili, xiaohongshu |
-| `Scrapy-Redis` | 分布式爬取 | dangdang_scrapy_redis |
-| `feedparser` + AI | RSS 聚合 + 内容生成 | news |
-| B站/小红书 API | 公开接口逆向 | bilibili UP 主, xiaohongshu 搜索 |
+## 文档
+
+| 文档 | 内容 |
+|------|------|
+| `docs/agent-reference.md` | Agent 决策参考手册（技术选型 + 踩坑经验） |
+| `docs/anti-blocking-guide.md` | 反爬七层经验总结 + B站/YouTube API 逆向流程 |
+| `docs/app-capture-guide.md` | App 抓包实战（mitmproxy + 手机配置） |
+| `docs/CHANGELOG.md` | 每次修改的时间/位置/原因 |
+| `docs/xxxx-design.md` | 新闻自动化流水线设计文档 |
+
+---
+
+*项目持续维护中。所有代码在 macOS/Windows/Linux 均可运行。*
