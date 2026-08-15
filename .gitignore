@@ -11,13 +11,12 @@ data/*
 news/data/
 dangdang_scrapy/data/
 
-# Cookie æŒä¹…åŒ–
-cookies.pkl
+# Cookie æŒä¹…åŒ?cookies.pkl
 **/cookies.json
 taobao/chrome_profile/
 taobao_profile/
 
-# API Keyï¼ˆåˆ‡å‹¿æäº¤åˆ° gitï¼‰
+# API Keyï¼ˆåˆ‡å‹¿æäº¤åˆ° gitï¼?
 **/api_key.txt
 
 # é¢è¯•èµ„æ–™ï¼ˆæœ¬åœ°ä»…å‚è€ƒï¼‰
@@ -25,3 +24,11 @@ docs/interview-prep.md
 
 # æ—¥å¿—
 logs/
+
+# ---- ²»ÍÆËÍ£ºAgent/Skill ÅäÖÃÓëÃæÊÔ×ÊÁÏ ----
+AGENTS.md
+CONTEXT.md
+docs/agents/
+docs/adr/
+docs/agent-reference.md
+docs/superpowers/
