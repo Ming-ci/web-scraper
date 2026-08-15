@@ -72,11 +72,9 @@ def _parse_item(item, scrape_time: str) -> dict | None:
     }
 
 
-def from_file(filepath: str, limit: int = None) -> list[dict]:
-    """从本地 HTML 文件提取。"""
-    with open(filepath, encoding="utf-8") as f:
-        soup = BeautifulSoup(f.read(), "lxml")
-
+def parse(html: str, limit: int = None) -> list[dict]:
+    """从频道页 HTML 提取视频列表（纯函数，无 IO）。"""
+    soup = BeautifulSoup(html, "lxml")
     scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     results = []
     seen = set()
@@ -92,6 +90,12 @@ def from_file(filepath: str, limit: int = None) -> list[dict]:
     return results
 
 
+def from_file(filepath: str, limit: int = None) -> list[dict]:
+    """从本地 HTML 文件提取（IO 薄壳）。"""
+    with open(filepath, encoding="utf-8") as f:
+        return parse(f.read(), limit=limit)
+
+
 def from_channel(channel_id: str, count: int = 30, proxy: str = None) -> list[dict]:
     """在线爬取 YouTube 频道视频（yt-dlp 引擎）。
 
@@ -99,8 +103,12 @@ def from_channel(channel_id: str, count: int = 30, proxy: str = None) -> list[di
     """
     import yt_dlp
 
+    from common.proxy import get_proxies
+
     scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    proxy_arg = proxy or "http://127.0.0.1:7890"
+    if proxy is None:
+        p = get_proxies()
+        proxy = (p or {}).get("https") or (p or {}).get("http")
     url = f"https://www.youtube.com/@{channel_id}/videos" if not channel_id.startswith("UC") else \
           f"https://www.youtube.com/channel/{channel_id}/videos"
 
@@ -108,7 +116,7 @@ def from_channel(channel_id: str, count: int = 30, proxy: str = None) -> list[di
         "quiet": True,
         "extract_flat": "in_playlist",
         "playlistend": count,
-        "proxy": proxy_arg,
+        "proxy": proxy,
     }
 
     def _fmt_duration(sec):

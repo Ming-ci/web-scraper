@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, date
 
 from bs4 import BeautifulSoup
 
+from common.errors import HTTPStatusError
 from common.proxy import get_proxies
 from common.retry import retry_on_network_error
 from common.tls import get as tls_get
@@ -114,7 +115,7 @@ def fetch(city_code: str) -> list[dict]:
 
     Raises:
         ConnectionError: 网络不可达
-        RuntimeError: HTTP 状态码非 200
+        HTTPStatusError: HTTP 状态码非 2xx（4xx 不重试，5xx 自动重试）
         ValueError: HTML 结构与预期不符
     """
     # 反向查找城市名
@@ -136,7 +137,7 @@ def fetch(city_code: str) -> list[dict]:
         raise ConnectionError(f"网络请求失败：{e}") from None
 
     if response.status_code != 200:
-        raise RuntimeError(f"请求失败，HTTP 状态码：{response.status_code}")
+        raise HTTPStatusError(response.status_code)
 
     response.encoding = "utf-8"
     soup = BeautifulSoup(response.text, "lxml")

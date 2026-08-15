@@ -143,6 +143,30 @@ def _parse_lockup(lockup: dict, scrape_time: str) -> dict:
     }
 
 
+def parse_channel_data(data: dict, count: int = 30, scrape_time: str = None) -> list[dict]:
+    """从 InnerTube browse 响应中提取视频列表（纯函数，无 IO）。
+
+    Args:
+        data: youtubei/v1/browse 的 JSON 响应
+        count: 最多返回条数
+        scrape_time: 采集时间，缺省取当前时间
+
+    Returns:
+        视频数据列表
+    """
+    scrape_time = scrape_time or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    lockups = _extract_lockups(data)
+    results = []
+    seen = set()
+    for lockup in lockups:
+        parsed = _parse_lockup(lockup, scrape_time)
+        if parsed["link"] and parsed["link"] not in seen:
+            seen.add(parsed["link"])
+            results.append(parsed)
+
+    return results[:count]
+
+
 def browse_channel(channel_handle: str, count: int = 30, proxy: str = None) -> list[dict]:
     """纯 Python 逆向：调 InnerTube API 获取频道视频。
 
@@ -156,8 +180,11 @@ def browse_channel(channel_handle: str, count: int = 30, proxy: str = None) -> l
     Returns:
         视频数据列表
     """
-    proxy = proxy or "http://127.0.0.1:7890"
-    scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    from common.proxy import get_proxies
+
+    if proxy is None:
+        p = get_proxies()
+        proxy = (p or {}).get("https") or (p or {}).get("http")
     session = cr.Session()
 
     # 1. 获取配置
@@ -192,13 +219,4 @@ def browse_channel(channel_handle: str, count: int = 30, proxy: str = None) -> l
         return []
 
     # 5. 解析
-    lockups = _extract_lockups(data)
-    results = []
-    seen = set()
-    for lockup in lockups:
-        parsed = _parse_lockup(lockup, scrape_time)
-        if parsed["link"] and parsed["link"] not in seen:
-            seen.add(parsed["link"])
-            results.append(parsed)
-
-    return results[:count]
+    return parse_channel_data(data, count=count)

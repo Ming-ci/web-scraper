@@ -78,13 +78,9 @@ def api_request(endpoint: str, params: dict) -> dict:
     """
     signed = sign_params(params)
 
-    # 尝试加载登录态 Cookie（绕过风控）
-    cookies = {}
-    try:
-        from bilibili.auth import load_cookies
-        cookies = load_cookies()
-    except ImportError:
-        pass
+    # 加载登录态 Cookie（绕过风控）；无文件时为空 dict
+    from bilibili.auth import load_cookies
+    cookies = load_cookies()
 
     resp = curl_requests.get(
         f"https://api.bilibili.com{endpoint}",

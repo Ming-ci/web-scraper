@@ -67,16 +67,13 @@ def _parse_item(item, scrape_time: str) -> dict | None:
     }
 
 
-def from_file(filepath: str, limit: int = None) -> list[dict]:
-    """从本地 HTML 文件提取搜索结果。"""
-    with open(filepath, encoding="utf-8") as f:
-        soup = BeautifulSoup(f.read(), "lxml")
-
+def parse(html: str, limit: int = None) -> list[dict]:
+    """从搜索页 HTML 提取笔记列表（纯函数，无 IO）。"""
+    soup = BeautifulSoup(html, "lxml")
     scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    items = soup.select("section.note-item")
     results = []
 
-    for item in items:
+    for item in soup.select("section.note-item"):
         data = _parse_item(item, scrape_time)
         if data:
             results.append(data)
@@ -86,28 +83,26 @@ def from_file(filepath: str, limit: int = None) -> list[dict]:
     return results
 
 
+def from_file(filepath: str, limit: int = None) -> list[dict]:
+    """从本地 HTML 文件提取搜索结果（IO 薄壳）。"""
+    with open(filepath, encoding="utf-8") as f:
+        return parse(f.read(), limit=limit)
+
+
 def from_search(keyword: str, scroll: int = 5) -> list[dict]:
     """通过 Playwright 在线搜索小红书关键词。"""
     from playwright.sync_api import sync_playwright
+    from common.auth import jar_to_playwright, load_jar
     from common.stealth import apply_stealth
-    from xiaohongshu.auth import load_cookies, has_cookies
+    from xiaohongshu.auth import COOKIE_FILE
 
     url = f"https://www.xiaohongshu.com/search_result?keyword={keyword}&source=web_search_result_notes"
-    scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context()
-        # 注入登录态 Cookie（必须带 domain + path）
-        if has_cookies():
-            formatted = []
-            for k, v in load_cookies().items():
-                formatted.append({
-                    "name": k, "value": v,
-                    "domain": ".xiaohongshu.com",
-                    "path": "/",
-                })
-            context.add_cookies(formatted)
+        # 注入登录态 Cookie（完整 jar，domain/path 由 auth seam 补齐）
+        context.add_cookies(jar_to_playwright(load_jar(COOKIE_FILE), domain=".xiaohongshu.com"))
         page = context.new_page()
         apply_stealth(page)
         page.goto(url, wait_until="domcontentloaded", timeout=30000)
@@ -127,13 +122,4 @@ def from_search(keyword: str, scroll: int = 5) -> list[dict]:
         html = page.content()
         browser.close()
 
-    soup = BeautifulSoup(html, "lxml")
-    items = soup.select("section.note-item")
-    results = []
-
-    for item in items:
-        data = _parse_item(item, scrape_time)
-        if data:
-            results.append(data)
-
-    return results
+    return parse(html)

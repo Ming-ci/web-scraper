@@ -4,11 +4,12 @@
     python -m xiaohongshu.auth           # 扫码登录，保存 Cookie
 """
 
-import json
 import time
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
+
+from common.auth import flatten_jar, has_cookies as _has_cookies, load_jar, save_jar
 
 COOKIE_FILE = Path(__file__).parent / "cookies.json"
 
@@ -80,8 +81,7 @@ def login() -> bool:
         cookies = context.cookies()
         browser.close()
 
-        with open(COOKIE_FILE, "w", encoding="utf-8") as f:
-            json.dump(cookies, f, ensure_ascii=False, indent=2)
+        save_jar(COOKIE_FILE, cookies)
 
         print(f"已保存 {len(cookies)} 个 Cookie 到 {COOKIE_FILE}")
         print("核心 Cookie:")
@@ -93,15 +93,12 @@ def login() -> bool:
 
 
 def load_cookies() -> dict[str, str]:
-    if not COOKIE_FILE.exists():
-        return {}
-    with open(COOKIE_FILE, encoding="utf-8") as f:
-        cookies = json.load(f)
-    return {c["name"]: c["value"] for c in cookies}
+    """{name: value} 扁平格式（curl_cffi / requests 用）。"""
+    return flatten_jar(load_jar(COOKIE_FILE))
 
 
 def has_cookies() -> bool:
-    return COOKIE_FILE.exists() and len(load_cookies()) > 0
+    return _has_cookies(COOKIE_FILE)
 
 
 if __name__ == "__main__":

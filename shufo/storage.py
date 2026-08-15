@@ -1,48 +1,28 @@
-"""CSV + Excel 导出。"""
-
+"""佛书网书籍 CSV + Excel 导出（薄 adapter，逻辑在 common.storage）。"""
 from datetime import datetime
 from pathlib import Path
-import csv
+
+from common.storage import to_csv as _to_csv
+from common.storage import to_excel as _to_excel
 
 CSV_COLUMNS = ["title", "pages", "size", "pub_time", "rating", "beans", "link", "scrape_time"]
 OUTPUT_DIR = Path(__file__).parent.parent / "data"
 
 
-def to_csv(data: list[dict], filepath: str = None) -> str:
+def _path(ext: str) -> str:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    if filepath is None:
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filepath = str(OUTPUT_DIR / f"shufo_{ts}.csv")
-    with open(filepath, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
-        writer.writeheader()
-        for d in data:
-            writer.writerow({k: d.get(k, "") for k in CSV_COLUMNS})
-    return filepath
+    return str(OUTPUT_DIR / f"shufo_{datetime.now():%Y%m%d_%H%M%S}.{ext}")
+
+
+def to_csv(data: list[dict], filepath: str = None) -> str:
+    return _to_csv(data, CSV_COLUMNS, filepath or _path("csv"))
 
 
 def to_excel(data: list[dict], filepath: str = None) -> str:
-    from openpyxl import Workbook
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    if filepath is None:
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filepath = str(OUTPUT_DIR / f"shufo_{ts}.xlsx")
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "文档列表"
-    ws.append(["序号", "名称", "页数", "大小", "时间", "评分", "书豆", "链接", "爬取时间"])
-    for i, d in enumerate(data, 1):
-        ws.append([i, d.get("title", ""), d.get("pages", ""), d.get("size", ""),
-                    d.get("pub_time", ""), d.get("rating", ""), d.get("beans", ""),
-                    d.get("link", ""), d.get("scrape_time", "")])
-    ws.column_dimensions["A"].width = 6
-    ws.column_dimensions["B"].width = 70
-    ws.column_dimensions["C"].width = 8
-    ws.column_dimensions["D"].width = 10
-    ws.column_dimensions["E"].width = 10
-    ws.column_dimensions["F"].width = 8
-    ws.column_dimensions["G"].width = 8
-    ws.column_dimensions["H"].width = 45
-    ws.column_dimensions["I"].width = 20
-    wb.save(filepath)
-    return filepath
+    return _to_excel(
+        data, CSV_COLUMNS,
+        ["名称", "页数", "大小", "时间", "评分", "书豆", "链接", "抓取时间"],
+        filepath or _path("xlsx"), sheet_title="文档列表",
+        col_widths={"A": 6, "B": 70, "C": 8, "D": 10, "E": 10,
+                    "F": 8, "G": 8, "H": 45, "I": 20},
+    )

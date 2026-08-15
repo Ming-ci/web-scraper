@@ -90,11 +90,9 @@ def _parse_item(item, scrape_time: str) -> dict | None:
     return data if data.get("title") else None
 
 
-def from_file(filepath: str, limit: int = None) -> list[dict]:
-    """从本地 HTML 文件提取搜索结果。"""
-    with open(filepath, encoding="utf-8") as f:
-        soup = BeautifulSoup(f.read(), "lxml")
-
+def parse(html: str, limit: int = None) -> list[dict]:
+    """从搜索页 HTML 提取商品列表（纯函数，无 IO）。"""
+    soup = BeautifulSoup(html, "lxml")
     scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     results = [_parse_item(item, scrape_time)
                for item in soup.select("div[data-asin]")]
@@ -102,6 +100,12 @@ def from_file(filepath: str, limit: int = None) -> list[dict]:
     if limit:
         results = results[:limit]
     return results
+
+
+def from_file(filepath: str, limit: int = None) -> list[dict]:
+    """从本地 HTML 文件提取搜索结果（IO 薄壳）。"""
+    with open(filepath, encoding="utf-8") as f:
+        return parse(f.read(), limit=limit)
 
 
 def from_search(keyword: str, limit: int = None) -> list[dict]:
@@ -122,11 +126,4 @@ def from_search(keyword: str, limit: int = None) -> list[dict]:
     html_path = out_dir / f"Amazon_{keyword}.html"
     html_path.write_text(resp.text, encoding="utf-8")
 
-    soup = BeautifulSoup(resp.text, "lxml")
-    scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    results = [_parse_item(item, scrape_time)
-               for item in soup.select("div[data-asin]")]
-    results = [r for r in results if r]
-    if limit:
-        results = results[:limit]
-    return results
+    return parse(resp.text, limit=limit)

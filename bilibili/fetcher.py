@@ -113,6 +113,21 @@ def _parse_item(li) -> dict | None:
     }
 
 
+def parse(html: str, category: str = "全站") -> list[dict]:
+    """从排行榜页 HTML 提取视频列表（纯函数，无 IO）。"""
+    soup = BeautifulSoup(html, "lxml")
+    items = soup.select("li.rank-item")
+
+    scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    results = []
+    for li in items:
+        data = _parse_item(li)
+        if data:
+            data["scrape_time"] = scrape_time
+            data["category"] = category
+            results.append(data)
+    return results
+
 
 def fetch_rank(category: str = "tech") -> list[dict]:
     """用 Playwright 抓取 B 站排行榜指定分区的前 100 个视频。
@@ -124,7 +139,6 @@ def fetch_rank(category: str = "tech") -> list[dict]:
         视频列表，含 title/author/plays/likes/rank
     """
     tab_name = CATEGORIES.get(category, category)
-    scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -147,17 +161,7 @@ def fetch_rank(category: str = "tech") -> list[dict]:
         page.wait_for_timeout(1000)
 
         # 4. 解析
-        soup = BeautifulSoup(page.content(), "lxml")
-        items = soup.select("li.rank-item")
-
-        results = []
-        for li in items:
-            data = _parse_item(li)
-            if data:
-                data["scrape_time"] = scrape_time
-                data["category"] = tab_name
-                results.append(data)
-
+        html = page.content()
         browser.close()
 
-    return results
+    return parse(html, category=tab_name)

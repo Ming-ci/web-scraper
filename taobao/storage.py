@@ -1,35 +1,27 @@
-"""CSV + Excel 导出。"""
-import csv
+"""淘宝商品 CSV + Excel 导出（薄 adapter，逻辑在 common.storage）。"""
 from datetime import datetime
 from pathlib import Path
+
+from common.storage import to_csv as _to_csv
+from common.storage import to_excel as _to_excel
 
 CSV_COLUMNS = ["title", "brand", "price", "sales", "shop", "scrape_time"]
 OUTPUT_DIR = Path(__file__).parent.parent / "data" / "taobao"
 
 
-def to_csv(data, fp=None):
+def _path(ext: str) -> str:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    fp = fp or str(OUTPUT_DIR / f"taobao_{datetime.now():%Y%m%d_%H%M%S}.csv")
-    with open(fp, "w", newline="", encoding="utf-8-sig") as f:
-        w = csv.writer(f)
-        w.writerow(["序号"] + CSV_COLUMNS)
-        for i, d in enumerate(data, 1):
-            w.writerow([i] + [d.get(k, "") for k in CSV_COLUMNS])
-    return fp
+    return str(OUTPUT_DIR / f"taobao_{datetime.now():%Y%m%d_%H%M%S}.{ext}")
+
+
+def to_csv(data, fp=None):
+    return _to_csv(data, CSV_COLUMNS, fp or _path("csv"), numbered=True)
 
 
 def to_excel(data, fp=None):
-    from openpyxl import Workbook
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    fp = fp or str(OUTPUT_DIR / f"taobao_{datetime.now():%Y%m%d_%H%M%S}.xlsx")
-    wb = Workbook(); ws = wb.active; ws.title = "商品"
-    ws.append(["序号", "标题", "品牌", "价格", "销量", "店铺", "爬取时间"])
-    for i, d in enumerate(data, 1):
-        ws.append([i, d.get("title", ""), d.get("brand", ""), d.get("price", ""),
-                    d.get("sales", ""), d.get("shop", ""), d.get("scrape_time", "")])
-    ws.column_dimensions["A"].width = 6; ws.column_dimensions["B"].width = 55
-    ws.column_dimensions["C"].width = 18; ws.column_dimensions["D"].width = 10
-    ws.column_dimensions["E"].width = 12; ws.column_dimensions["F"].width = 22
-    ws.column_dimensions["G"].width = 20
-    wb.save(fp)
-    return fp
+    return _to_excel(
+        data, CSV_COLUMNS,
+        ["标题", "品牌", "价格", "销量", "店铺", "爬取时间"],
+        fp or _path("xlsx"), sheet_title="商品",
+        col_widths={"A": 6, "B": 55, "C": 18, "D": 10, "E": 12, "F": 22, "G": 20},
+    )

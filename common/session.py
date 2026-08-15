@@ -2,7 +2,7 @@
 
 端口：
     create_session()  — 创建已配置好浏览器 headers 的 Session
-    save_cookies()    — 将当前 Cookie 持久化到文件
+    save_cookies()    — 将当前 Cookie 持久化到文件（JSON jar，见 common.auth）
     load_cookies()    — 从文件恢复 Cookie（跨启动保持登录态）
 
 原理：
@@ -11,14 +11,14 @@
     save/load_cookies()     → Cookie 落盘，脚本重启后仍保持登录态
 """
 
-import pickle
 from pathlib import Path
 
 import requests
 
+from common.auth import load_jar, save_jar
 from common.headers import get_headers
 
-DEFAULT_COOKIE_FILE = Path("cookies.pkl")
+DEFAULT_COOKIE_FILE = Path("cookies.json")
 
 
 def create_session() -> requests.Session:
@@ -37,35 +37,49 @@ def create_session() -> requests.Session:
     return session
 
 
+def _jar_from_session(session: requests.Session) -> list[dict]:
+    """把 requests CookieJar 转为 JSON jar（Playwright 兼容格式）。"""
+    jar = []
+    for c in session.cookies:
+        jar.append({
+            "name": c.name,
+            "value": c.value,
+            "domain": c.domain or "",
+            "path": c.path or "/",
+        })
+    return jar
+
+
 def save_cookies(session: requests.Session, path: str = None) -> None:
-    """将 Session 中的 Cookie 序列化到文件。
+    """将 Session 中的 Cookie 序列化到文件（JSON jar 格式）。
 
     Args:
         session: 发起过请求的 Session（已设置了 Cookie）
-        path: 保存路径，默认 cookies.pkl
+        path: 保存路径，默认 cookies.json
     """
     filepath = Path(path) if path else DEFAULT_COOKIE_FILE
-    with open(filepath, "wb") as f:
-        pickle.dump(session.cookies, f)
+    save_jar(filepath, _jar_from_session(session))
 
 
 def load_cookies(session: requests.Session, path: str = None) -> bool:
-    """从文件恢复 Cookie 到 Session。
+    """从文件恢复 Cookie 到 Session（JSON jar 格式）。
 
     Args:
         session: 待恢复的 Session
-        path: Cookie 文件路径，默认 cookies.pkl
+        path: Cookie 文件路径，默认 cookies.json
 
     Returns:
         True 表示成功加载，False 表示文件不存在或损坏
     """
     filepath = Path(path) if path else DEFAULT_COOKIE_FILE
-    if not filepath.exists():
+    jar = load_jar(filepath)
+    if not jar:
         return False
-    try:
-        with open(filepath, "rb") as f:
-            cookies = pickle.load(f)
-        session.cookies.update(cookies)
-        return True
-    except (pickle.UnpicklingError, EOFError, OSError):
-        return False
+    for c in jar:
+        session.cookies.set(
+            c.get("name", ""),
+            c.get("value", ""),
+            domain=c.get("domain") or None,
+            path=c.get("path") or "/",
+        )
+    return True

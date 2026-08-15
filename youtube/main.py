@@ -1,6 +1,7 @@
-"""YouTube爬虫 CLI — 支持 yt-dlp / innertube / file 三种模式。"""
+"""YouTube爬虫 CLI — 引擎选择收敛在 channel 深模块。"""
 import argparse, sys
-from youtube.fetcher import from_file, from_channel
+from youtube.channel import fetch_channel
+from youtube.fetcher import from_file
 from youtube.storage import to_csv, to_excel
 
 def main():
@@ -21,11 +22,8 @@ def main():
     if args.mode=="file":
         data = from_file(args.path)
     elif args.mode=="search":
-        if args.engine == "innertube":
-            from youtube.innertube import browse_channel
-            data = browse_channel(args.channel, count=args.count, proxy=args.proxy)
-        else:
-            data = from_channel(args.channel, count=args.count, proxy=args.proxy)
+        data = fetch_channel(args.channel, count=args.count,
+                             proxy=args.proxy, engine=args.engine)
     else: p.print_help(); sys.exit(0)
 
     if not data: print("未获取到数据"); sys.exit(1)

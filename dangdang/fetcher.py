@@ -15,6 +15,7 @@ import re
 
 from bs4 import BeautifulSoup
 
+from common.errors import HTTPStatusError
 from common.session import create_session
 from common.throttle import random_delay
 from common.proxy import get_proxies
@@ -87,7 +88,7 @@ def fetch_page(keyword: str, page: int = 1) -> list[dict]:
     response = session.get(url, proxies=get_proxies(), timeout=10)
 
     if response.status_code != 200:
-        raise RuntimeError(f"请求失败，HTTP 状态码：{response.status_code}")
+        raise HTTPStatusError(response.status_code)
 
     # 当当编码为 GBK
     response.encoding = "gbk"

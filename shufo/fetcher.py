@@ -81,11 +81,9 @@ def _parse_container(container, scrape_time: str) -> dict | None:
     }
 
 
-def from_file(filepath: str, limit: int = None) -> list[dict]:
-    """从本地 HTML 文件提取。"""
-    with open(filepath, encoding="utf-8") as f:
-        soup = BeautifulSoup(f.read(), "lxml")
-
+def parse(html: str, limit: int = None) -> list[dict]:
+    """从分类页 HTML 提取书籍列表（纯函数，无 IO）。"""
+    soup = BeautifulSoup(html, "lxml")
     scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     seen = set()
     results = []
@@ -113,11 +111,16 @@ def from_file(filepath: str, limit: int = None) -> list[dict]:
     return results
 
 
+def from_file(filepath: str, limit: int = None) -> list[dict]:
+    """从本地 HTML 文件提取（IO 薄壳）。"""
+    with open(filepath, encoding="utf-8") as f:
+        return parse(f.read(), limit=limit)
+
+
 def from_search(pages: int = 5, limit: int = None) -> list[dict]:
     """在线爬取 shu.fo（Playwright + 翻页）。"""
     from playwright.sync_api import sync_playwright
 
-    scrape_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     all_results = []
     seen = set()
 
@@ -135,9 +138,9 @@ def from_search(pages: int = 5, limit: int = None) -> list[dict]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            soup = BeautifulSoup(page.content(), "lxml")
+            html = page.content()
             count = 0
-            for a in soup.select("a[href*='/document/']"):
+            for a in BeautifulSoup(html, "lxml").select("a[href*='/document/']"):
                 link = a.get("href", "")
                 if link in seen:
                     continue
@@ -150,7 +153,7 @@ def from_search(pages: int = 5, limit: int = None) -> list[dict]:
                     if "书豆" in t:
                         break
 
-                data = _parse_container(container, scrape_time)
+                data = _parse_container(container, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                 if data and data["title"]:
                     all_results.append(data)
                     count += 1

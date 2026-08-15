@@ -19,21 +19,21 @@ from playwright.sync_api import sync_playwright
 OUT_DIR = Path(__file__).parent.parent / "data"
 
 
-def connect_chrome(headless: bool = False) -> "Page":
-    """连接 Chrome DevTools Protocol。
+def connect_chrome() -> tuple:
+    """连接 Chrome DevTools Protocol（返回 (playwright, context, browser, page)）。
 
     先启动 Chrome:
         chrome.exe --remote-debugging-port=9222
     """
-    with sync_playwright() as p:
-        browser = p.chromium.connect_over_cdp("http://127.0.0.1:9222")
-        context = browser.contexts[0]
-        page = context.new_page()
-        return browser, page
+    p = sync_playwright().start()
+    browser = p.chromium.connect_over_cdp("http://127.0.0.1:9222")
+    context = browser.contexts[0]
+    page = context.new_page()
+    return p, context, browser, page
 
 
-def launch_chrome(headless: bool = False) -> "Page":
-    """直接启动 Chrome（持久化 Profile）。"""
+def launch_chrome(headless: bool = False) -> tuple:
+    """直接启动 Chrome（持久化 Profile，返回 (playwright, context, browser, page)）。"""
     from common.stealth import apply_stealth
 
     profile = Path(__file__).parent / "chrome_profile"
@@ -49,7 +49,7 @@ def launch_chrome(headless: bool = False) -> "Page":
     )
     page = context.new_page()
     apply_stealth(page)
-    return p, context, page
+    return p, context, None, page
 
 
 def search_keyword(page, keyword: str, max_pages: int, output_dir: str):
@@ -130,15 +130,12 @@ def main():
 
     if args.cdp:
         print("连接 Chrome CDP (端口 9222)...")
-        browser, page = connect_chrome()
-        ctx = None
-        p_inst = None
+        p_inst, ctx, browser, page = connect_chrome()
     else:
         print(f"启动 Chrome ({'无头' if args.headless else '可见'})...")
         if not args.headless:
             print("提示: 如果是首次使用，请先在弹出的浏览器中登录淘宝")
-        p_inst, ctx, page = launch_chrome(headless=args.headless)
-        browser = None
+        p_inst, ctx, browser, page = launch_chrome(headless=args.headless)
 
     try:
         files = search_keyword(page, args.keyword, args.pages, str(OUT_DIR))
@@ -158,9 +155,11 @@ def main():
         else:
             print("未提取到商品数据")
     finally:
-        if browser: browser.close()
-        if ctx: ctx.close()
-        if p_inst: p_inst.stop()
+        if browser:
+            browser.close()
+        if ctx:
+            ctx.close()
+        p_inst.stop()
 
 
 if __name__ == "__main__":

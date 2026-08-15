@@ -16,9 +16,11 @@ import random
 import sys
 import time
 
+from common.errors import HTTPStatusError
+
 
 def retry_on_network_error(max_retries: int = 3, base_delay: float = 1.0):
-    """装饰器：当函数抛出 ConnectionError 或 5xx RuntimeError 时自动重试。
+    """装饰器：网络错误或 5xx 服务端错误时自动重试。
 
     重试策略：指数退避 + 随机抖动。
         第 1 次重试: ~1.0s  后
@@ -26,7 +28,7 @@ def retry_on_network_error(max_retries: int = 3, base_delay: float = 1.0):
         第 3 次重试: ~4.0s  后
 
     不重试的情况：
-        - HTTP 4xx — 客户端错误（重试没用）
+        - HTTP 4xx（HTTPStatusError.status_code < 500）— 客户端错误，重试没用
         - ValueError — 数据解析错误（重试不会改变页面结构）
 
     Args:
@@ -52,18 +54,17 @@ def retry_on_network_error(max_retries: int = 3, base_delay: float = 1.0):
                         file=sys.stderr,
                     )
                     time.sleep(delay)
-                except RuntimeError as e:
+                except HTTPStatusError as e:
                     last_exception = e
-                    msg = str(e)
-                    # 4xx 不重试
-                    if "404" in msg or "400" in msg or "403" in msg:
+                    # 4xx 客户端错误不重试
+                    if e.status_code < 500:
                         raise
-                    # 5xx 或其他 HTTP 错误重试
+                    # 5xx 服务端错误重试
                     if attempt == max_retries:
                         break
                     delay = base_delay * (2 ** attempt) * random.uniform(0.8, 1.2)
                     print(
-                        f"  ⚠ HTTP 错误（{msg}），{delay:.1f}s 后重试 (第 {attempt + 1}/{max_retries} 次)...",
+                        f"  ⚠ HTTP 错误（{e}），{delay:.1f}s 后重试 (第 {attempt + 1}/{max_retries} 次)...",
                         file=sys.stderr,
                     )
                     time.sleep(delay)
